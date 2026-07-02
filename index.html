@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>No-API Hybrid Chatbot Engine</title>
+    <style>
+      :root {
+        --ink: #111827;
+        --muted: #667085;
+        --panel: #f3f6f8;
+        --line: #d7dde5;
+        --white: #ffffff;
+        --signal: #0f8b8d;
+        --cyan: #dff7f7;
+        --amber: #f59e0b;
+        --dark: #14171f;
+        --dark-2: #1c2230;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+        color: var(--ink);
+        background: #e8edf2;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button,
+      textarea {
+        font: inherit;
+      }
+
+      .app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: 380px minmax(360px, 1fr) 430px;
+        min-height: 0;
+      }
+
+      .panel {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--line);
+        background: var(--white);
+      }
+
+      .answer {
+        background: var(--panel);
+      }
+
+      .debug {
+        color: #f1f5f9;
+        background: var(--dark);
+        border-right: 0;
+      }
+
+      header {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .debug header {
+        border-bottom-color: #334155;
+      }
+
+      .eyebrow {
+        margin: 0 0 4px;
+        color: var(--muted);
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .debug .eyebrow {
+        color: #94a3b8;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1,
+      h2 {
+        font-size: 17px;
+        line-height: 1.4;
+      }
+
+      .scroll {
+        min-height: 0;
+        flex: 1;
+        overflow: auto;
+        padding: 16px;
+      }
+
+      .messages {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .message {
+        border: 1px solid var(--line);
+        background: var(--white);
+        padding: 12px;
+        line-height: 1.65;
+        font-size: 14px;
+      }
+
+      .message.user {
+        margin-left: 32px;
+        border-color: var(--signal);
+        background: var(--cyan);
+      }
+
+      .message.system {
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 12px;
+        color: #92400e;
+        border-color: #f8d391;
+        background: #fff7ed;
+      }
+
+      .message-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .composer {
+        padding: 16px;
+        border-top: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 112px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        background: var(--white);
+        color: var(--ink);
+        padding: 12px;
+        outline: none;
+        line-height: 1.6;
+      }
+
+      textarea:focus {
+        border-color: var(--signal);
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      button {
+        border: 1px solid var(--ink);
+        background: var(--ink);
+        color: var(--white);
+        padding: 11px 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        color: var(--ink);
+        background: var(--white);
+        border-color: var(--line);
+      }
+
+      button:hover {
+        filter: brightness(1.06);
+      }
+
+      .answer-card,
+      .metric,
+      .debug-card {
+        border: 1px solid var(--line);
+        background: var(--white);
+        padding: 14px;
+      }
+
+      .answer-card p:last-child {
+        margin-top: 8px;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.75;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .metric .value {
+        margin-top: 6px;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+      }
+
+      .debug-section {
+        margin-bottom: 16px;
+      }
+
+      .debug-section h3 {
+        margin-bottom: 8px;
+        color: #94a3b8;
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .debug-card {
+        color: #e2e8f0;
+        border-color: #334155;
+        background: var(--dark-2);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .trace-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        border: 1px solid #334155;
+        background: var(--dark-2);
+        padding: 8px 10px;
+        color: #e2e8f0;
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 12px;
+      }
+
+      .trace-row + .trace-row {
+        margin-top: 6px;
+      }
+
+      .trace-row span:first-child {
+        color: #94a3b8;
+        text-transform: uppercase;
+      }
+
+      .trace-row span:last-child {
+        color: #67e8f9;
+        text-align: right;
+        overflow-wrap: anywhere;
+      }
+
+      .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .tag {
+        border: 1px solid #0e7490;
+        background: #164e63;
+        color: #cffafe;
+        padding: 4px 7px;
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 12px;
+      }
+
+      .empty {
+        color: #94a3b8;
+        border: 1px solid #334155;
+        background: var(--dark-2);
+        padding: 10px;
+        font-size: 13px;
+      }
+
+      .footer {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 1px;
+        border-top: 1px solid var(--line);
+        background: var(--line);
+      }
+
+      .footer .metric {
+        border: 0;
+      }
+
+      @media (max-width: 1120px) {
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .panel {
+          min-height: 520px;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .footer {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="workspace">
+        <section class="panel">
+          <header>
+            <p class="eyebrow">Chat Panel</p>
+            <h1>No-API Hybrid Chatbot Engine</h1>
+          </header>
+          <div class="scroll">
+            <div id="messages" class="messages"></div>
+          </div>
+          <form id="composer" class="composer">
+            <p class="eyebrow">Input</p>
+            <textarea id="input" placeholder="例如：我想應徵前端，作品集想做不靠 AI API 的聊天機器人"></textarea>
+            <div class="actions">
+              <button type="submit">Run Local Inference</button>
+              <button type="button" class="secondary" id="reset">Reset</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel answer">
+          <header>
+            <p class="eyebrow">Answer / Recommendation</p>
+            <h2>Hybrid Decision Output</h2>
+          </header>
+          <div class="scroll">
+            <div class="answer-card">
+              <p class="eyebrow">Final Response</p>
+              <p id="final-response">輸入問題後，這裡會顯示本地推理、FAQ 檢索與 intent classifier 的混合決策結果。</p>
+            </div>
+            <div class="metrics-grid">
+              <div class="metric"><p class="eyebrow">Source</p><p class="value" id="source">waiting</p></div>
+              <div class="metric"><p class="eyebrow">Confidence</p><p class="value" id="confidence">0%</p></div>
+              <div class="metric"><p class="eyebrow">Intent</p><p class="value" id="intent">none</p></div>
+              <div class="metric"><p class="eyebrow">Top FAQ Score</p><p class="value" id="top-score">0.000</p></div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel debug">
+          <header>
+            <p class="eyebrow">Explainable Debug Panel</p>
+            <h2>Reasoning Trace</h2>
+          </header>
+          <div class="scroll" id="debug"></div>
+        </aside>
+      </section>
+
+      <footer class="footer">
+        <div class="metric"><p class="eyebrow">Inference Time</p><p class="value" id="time">0.00 ms</p></div>
+        <div class="metric"><p class="eyebrow">Rules Checked</p><p class="value" id="rules">0</p></div>
+        <div class="metric"><p class="eyebrow">Candidate Docs</p><p class="value" id="docs">0</p></div>
+        <div class="metric"><p class="eyebrow">Memory Estimate</p><p class="value" id="memory">0 KB</p></div>
+        <div class="metric"><p class="eyebrow">Worker Status</p><p class="value">planned</p></div>
+      </footer>
+    </main>
+
+    <script>
+      const facts = [
+        ["goal_frontend", [/前端/i, /frontend/i, /front-end/i]],
+        ["skill_html", [/html/i]],
+        ["skill_css", [/css/i]],
+        ["skill_python", [/python/i]],
+        ["lack_javascript", [/不會\s*javascript/i, /不熟\s*javascript/i, /不會\s*js/i, /缺乏\s*js/i]],
+        ["want_portfolio", [/作品集/i, /portfolio/i, /專案展示/i]],
+        ["want_algorithm_project", [/演算法/i, /algorithm/i, /資料結構/i]],
+        ["want_no_api_chatbot", [/不靠\s*ai\s*api/i, /no-api/i, /不用\s*api/i, /聊天機器人/i, /chatbot/i]],
+      ];
+
+      const rules = [
+        {
+          id: "r_frontend_portfolio",
+          description: "IF goal_frontend AND want_portfolio THEN suggest_frontend_project",
+          when: ["goal_frontend", "want_portfolio"],
+          then: "建議做一個前端工程工具型作品集：包含可互動流程、狀態視覺化、資料處理與清楚的技術說明。",
+          confidence: 0.92,
+        },
+        {
+          id: "r_python_algorithm",
+          description: "IF skill_python AND want_algorithm_project THEN suggest_graph_analyzer",
+          when: ["skill_python", "want_algorithm_project"],
+          then: "你可以做 Graph Analyzer：把 Python/演算法能力轉成前端互動圖形，例如 BFS、DFS、最短路徑視覺化。",
+          confidence: 0.86,
+        },
+        {
+          id: "r_no_api_chatbot",
+          description: "IF want_no_api_chatbot THEN suggest_symbolic_chatbot",
+          when: ["want_no_api_chatbot"],
+          then: "可以做 No-API Hybrid Chatbot Engine：用規則推理、FAQ 檢索與小型分類器組成可解釋聊天系統。",
+          confidence: 0.95,
+        },
+        {
+          id: "r_frontend_js_gap",
+          description: "IF goal_frontend AND lack_javascript THEN suggest_learn_javascript",
+          when: ["goal_frontend", "lack_javascript"],
+          then: "若目標是前端且 JavaScript 還不熟，建議作品集同時呈現學習路線：DOM、TypeScript、React state、資料結構。",
+          confidence: 0.88,
+        },
+      ];
+
+      const faqs = [
+        ["faq_frontend_portfolio", "我想應徵前端，作品集要做什麼？", "建議做能展示狀態管理、資料處理、UI 細節與工程思維的互動工具，而不只是靜態頁面。", ["portfolio_advice", "frontend_learning"]],
+        ["faq_python_html_no_js", "我會 Python 和 HTML，但不會 JavaScript，適合做什麼？", "可以從 TypeScript 小工具開始，把 Python 的邏輯能力轉成前端互動，例如規則引擎或圖論視覺化。", ["skill_gap", "frontend_learning"]],
+        ["faq_no_api_chatbot", "不靠 AI API 可以做聊天機器人嗎？", "可以。可以用規則引擎、FAQ 檢索、意圖分類器與可解釋 debug trace 組成 pseudo chatbot。", ["no_api_chatbot", "project_recommendation"]],
+        ["faq_algorithm_frontend", "如何做有演算法感的前端作品？", "把演算法過程視覺化，顯示每一步狀態、決策理由、複雜度與效能指標。", ["algorithm_project", "project_recommendation"]],
+        ["faq_professional_portfolio", "如何讓作品集看起來不像大學作業？", "用清楚的產品問題、可操作介面、技術決策記錄、測試與 README，把作品包裝成工程案例。", ["portfolio_advice"]],
+      ].map(([id, question, answer, tags]) => ({ id, question, answer, tags }));
+
+      const trainingData = [
+        ["我想應徵前端 作品集 要做什麼", "portfolio_advice"],
+        ["portfolio 專案展示 怎麼安排 比較專業", "portfolio_advice"],
+        ["如何讓作品集 不像大學作業", "portfolio_advice"],
+        ["我會 python html 但不會 javascript", "skill_gap"],
+        ["缺乏 js 基礎 可以做什麼專案", "skill_gap"],
+        ["不熟 typescript react 要怎麼補技能", "skill_gap"],
+        ["請推薦 前端 portfolio project", "project_recommendation"],
+        ["想要作品集 專案推薦", "project_recommendation"],
+        ["不靠 AI API 可以做 chatbot 嗎", "no_api_chatbot"],
+        ["no api 聊天機器人 怎麼實作", "no_api_chatbot"],
+        ["前端 要先學 javascript 還是 react", "frontend_learning"],
+        ["網頁工程師 學習路線", "frontend_learning"],
+        ["演算法 感 的 前端作品", "algorithm_project"],
+        ["algorithm visualization graph analyzer", "algorithm_project"],
+        ["debug panel 為什麼這樣判斷", "debug_help"],
+        ["請解釋 confidence similarity score", "debug_help"],
+      ].map(([text, intent]) => ({ text, intent }));
+
+      const intentTemplates = {
+        portfolio_advice: "作品集建議聚焦在可操作的工程作品：清楚問題、互動流程、資料處理、狀態管理、debug trace，以及 README 中的技術決策。",
+        skill_gap: "你可以把技能缺口變成作品亮點：先用 TypeScript 補 JavaScript 基礎，再做小型工具展示資料流、狀態管理與測試。",
+        project_recommendation: "建議做一個工程工具型專案，例如 No-API chatbot、演算法視覺化、FAQ retrieval explorer，重點是讓面試官能操作與檢查推理過程。",
+        no_api_chatbot: "不靠外部 AI API 也能做 pseudo chatbot：用規則推理、FAQ 檢索、Naive Bayes intent classifier，再用 Debug Panel 解釋每次判斷。",
+        frontend_learning: "前端學習可按 JavaScript 基礎、TypeScript 型別、React state、資料處理、效能與測試逐步建立，並把每一步落成作品功能。",
+        algorithm_project: "有演算法感的前端作品適合做視覺化：顯示 token、index、graph traversal、score 計算與每一步狀態，讓邏輯透明可驗證。",
+        debug_help: "你可以從右側 Debug Panel 看判斷流程：facts 來自關鍵詞抽取，rules 顯示命中條件，retrieval 顯示相似度，intent 顯示分類機率。",
+      };
+
+      const synonyms = [
+        ["frontend", ["前端", "frontend", "front end", "front-end", "網頁工程師", "網頁開發"]],
+        ["portfolio", ["作品集", "portfolio", "專案展示", "作品展示"]],
+        ["javascript", ["javascript", "java script", "js"]],
+        ["python", ["python"]],
+        ["html", ["html"]],
+        ["css", ["css"]],
+        ["typescript", ["typescript", "ts"]],
+        ["react", ["react"]],
+        ["chatbot", ["聊天機器人", "chatbot", "聊天系統", "對話機器人"]],
+        ["no_api", ["不靠 api", "不用 api", "no api", "no-api", "無 api", "不靠 ai api"]],
+        ["ai_api", ["ai api", "openai api", "gemini api", "claude api"]],
+        ["algorithm", ["演算法", "algorithm", "資料結構", "data structure", "bfs", "dfs", "shortest path"]],
+        ["project", ["專案", "project", "作品"]],
+        ["recommend", ["推薦", "建議", "適合", "亮點"]],
+        ["learning", ["學習", "learn", "learning", "練習"]],
+        ["roadmap", ["路線", "學習路線", "roadmap"]],
+        ["skill_gap", ["不會", "不熟", "缺乏", "lack", "skill gap"]],
+        ["professional", ["專業", "不像大學作業", "工程案例", "產品問題"]],
+        ["visualization", ["視覺化", "visualization", "visualisation", "互動圖形"]],
+        ["debug", ["debug", "除錯", "偵錯", "debug panel", "reasoning trace"]],
+        ["explain", ["解釋", "為什麼", "判斷", "顯示原因"]],
+        ["confidence", ["confidence", "信心", "信心分數", "機率"]],
+        ["similarity", ["similarity", "相似度", "score", "分數"]],
+        ["decision", ["final decision", "決策", "選這個", "selected"]],
+        ["state", ["state", "狀態管理", "狀態"]],
+        ["test", ["test", "testing", "測試"]],
+        ["faq", ["faq", "問題", "答案"]],
+      ];
+
+      const aliasMap = new Map();
+      synonyms.forEach(([canonical, aliases]) => aliases.forEach((alias) => aliasMap.set(normalize(alias), canonical)));
+      const aliasesByLength = [...aliasMap.keys()].sort((a, b) => b.length - a.length);
+
+      function normalize(text) {
+        return text.normalize("NFKC").toLowerCase()
+          .replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~-]/g, " ")
+          .replace(/[，。！？、；：「」『』（）【】《》]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function tokenize(text) {
+        const normalized = normalize(text);
+        if (!normalized) return [];
+        const tokens = [];
+        const ranges = [];
+        aliasesByLength.forEach((alias) => {
+          let start = 0;
+          while (start < normalized.length) {
+            const index = normalized.indexOf(alias, start);
+            if (index === -1) break;
+            const range = [index, index + alias.length];
+            if (!ranges.some(([a, b]) => range[0] < b && range[1] > a)) {
+              ranges.push(range);
+              tokens.push(aliasMap.get(alias) || alias);
+            }
+            start = index + alias.length;
+          }
+        });
+        normalized.split(" ").forEach((raw) => {
+          const token = raw.trim();
+          if (token && token.length >= 2 && /[a-z0-9_]/i.test(token)) tokens.push(aliasMap.get(token) || token);
+        });
+        return tokens;
+      }
+
+      function extractFacts(input) {
+        const lower = input.toLowerCase();
+        return facts.filter(([, patterns]) => patterns.some((pattern) => pattern.test(lower))).map(([fact]) => fact);
+      }
+
+      function matchRules(inputFacts) {
+        const factSet = new Set(inputFacts);
+        return rules.filter((rule) => rule.when.every((fact) => factSet.has(fact))).sort((a, b) => b.confidence - a.confidence);
+      }
+
+      function tf(tokens) {
+        const vector = {};
+        tokens.forEach((token) => vector[token] = (vector[token] || 0) + 1);
+        Object.keys(vector).forEach((token) => vector[token] = vector[token] / tokens.length);
+        return vector;
+      }
+
+      function buildRetrieval() {
+        const docs = faqs.map((doc) => ({ doc, tokens: tokenize(`${doc.question} ${doc.answer} ${doc.tags.join(" ")}`) }));
+        const index = new Map();
+        docs.forEach(({ doc, tokens }) => [...new Set(tokens)].forEach((token) => {
+          if (!index.has(token)) index.set(token, new Set());
+          index.get(token).add(doc.id);
+        }));
+        const df = new Map();
+        docs.forEach(({ tokens }) => [...new Set(tokens)].forEach((token) => df.set(token, (df.get(token) || 0) + 1)));
+        const idf = new Map([...df.entries()].map(([token, count]) => [token, Math.log((docs.length + 1) / (count + 1)) + 1]));
+        const vectors = new Map(docs.map(({ doc, tokens }) => [doc.id, tfidf(tokens, idf, docs.length)]));
+        return { docs, index, idf, vectors };
+      }
+
+      function tfidf(tokens, idf, count) {
+        const termFrequency = tf(tokens);
+        const vector = {};
+        Object.entries(termFrequency).forEach(([token, value]) => vector[token] = value * (idf.get(token) || Math.log(count + 1) + 1));
+        return vector;
+      }
+
+      function cosine(a, b) {
+        const tokens = new Set([...Object.keys(a), ...Object.keys(b)]);
+        let dot = 0, ma = 0, mb = 0;
+        tokens.forEach((token) => {
+          const va = a[token] || 0;
+          const vb = b[token] || 0;
+          dot += va * vb;
+          ma += va * va;
+          mb += vb * vb;
+        });
+        return ma && mb ? dot / (Math.sqrt(ma) * Math.sqrt(mb)) : 0;
+      }
+
+      const retrievalResources = buildRetrieval();
+      const retrievalThreshold = 0.24;
+
+      function retrieve(input) {
+        const queryTokens = tokenize(input);
+        const candidateIds = [...new Set(queryTokens.flatMap((token) => [...(retrievalResources.index.get(token) || [])]))];
+        const searchableIds = candidateIds.length ? candidateIds : faqs.map((doc) => doc.id);
+        const queryVector = tfidf(queryTokens, retrievalResources.idf, retrievalResources.docs.length);
+        const results = retrievalResources.docs
+          .filter(({ doc }) => searchableIds.includes(doc.id))
+          .map(({ doc, tokens }) => ({
+            documentId: doc.id,
+            question: doc.question,
+            answer: doc.answer,
+            similarityScore: cosine(queryVector, retrievalResources.vectors.get(doc.id)),
+            matchedTokens: [...new Set(queryTokens.filter((token) => tokens.includes(token)))],
+          }))
+          .sort((a, b) => b.similarityScore - a.similarityScore)
+          .slice(0, 5);
+        return { queryTokens, candidateIds, results, selected: results.find((result) => result.similarityScore >= retrievalThreshold), searched: searchableIds.length };
+      }
+
+      function trainNaiveBayes() {
+        const vocabulary = new Set();
+        const docCount = new Map();
+        const tokenCount = new Map();
+        const totalTokens = new Map();
+        trainingData.forEach(({ text, intent }) => {
+          const tokens = tokenize(text);
+          docCount.set(intent, (docCount.get(intent) || 0) + 1);
+          if (!tokenCount.has(intent)) tokenCount.set(intent, new Map());
+          tokens.forEach((token) => {
+            vocabulary.add(token);
+            tokenCount.get(intent).set(token, (tokenCount.get(intent).get(token) || 0) + 1);
+            totalTokens.set(intent, (totalTokens.get(intent) || 0) + 1);
+          });
+        });
+        return { intents: [...docCount.keys()], vocabulary, docCount, tokenCount, totalTokens, totalDocs: trainingData.length };
+      }
+
+      const nbModel = trainNaiveBayes();
+      const intentThreshold = 0.36;
+
+      function classifyIntent(input) {
+        const tokens = tokenize(input);
+        const evidenceTokens = tokens.filter((token) => nbModel.vocabulary.has(token));
+        const scoringTokens = evidenceTokens.length ? evidenceTokens : tokens;
+        const logScores = nbModel.intents.map((intent) => {
+          const prior = (nbModel.docCount.get(intent) || 0) / nbModel.totalDocs;
+          const counts = nbModel.tokenCount.get(intent) || new Map();
+          const total = nbModel.totalTokens.get(intent) || 0;
+          const logScore = scoringTokens.reduce((score, token) => {
+            const likelihood = ((counts.get(token) || 0) + 1) / (total + nbModel.vocabulary.size);
+            return score + Math.log(likelihood);
+          }, Math.log(prior || Number.EPSILON));
+          return { intent, logScore };
+        });
+        const max = Math.max(...logScores.map((item) => item.logScore));
+        const expScores = logScores.map((item) => ({ intent: item.intent, score: Math.exp(item.logScore - max) }));
+        const total = expScores.reduce((sum, item) => sum + item.score, 0);
+        const probabilities = expScores.map((item) => ({ intent: item.intent, probability: item.score / total })).sort((a, b) => b.probability - a.probability);
+        return {
+          predictedIntent: probabilities[0].intent,
+          confidence: probabilities[0].probability,
+          probabilities: probabilities.slice(0, 3),
+          evidenceTokens: [...new Set(evidenceTokens)],
+        };
+      }
+
+      function runInference(input) {
+        const started = performance.now();
+        const extractedFacts = extractFacts(input);
+        const triggeredRules = matchRules(extractedFacts);
+        const retrieval = retrieve(input);
+        const intent = classifyIntent(input);
+        const bestRule = triggeredRules[0];
+        let finalResponse, finalSource, confidence, reason;
+        if (bestRule && bestRule.confidence >= 0.85) {
+          finalResponse = bestRule.then;
+          finalSource = "rule-based";
+          confidence = bestRule.confidence;
+          reason = `Rule ${bestRule.id} matched all required facts and confidence ${bestRule.confidence.toFixed(2)} >= 0.85.`;
+        } else if (retrieval.selected) {
+          finalResponse = retrieval.selected.answer;
+          finalSource = "retrieval-based";
+          confidence = retrieval.selected.similarityScore;
+          reason = `FAQ ${retrieval.selected.documentId} similarity ${retrieval.selected.similarityScore.toFixed(2)} >= ${retrievalThreshold.toFixed(2)}.`;
+        } else if (intent.confidence >= intentThreshold) {
+          finalResponse = intentTemplates[intent.predictedIntent];
+          finalSource = "ML intent-based";
+          confidence = intent.confidence;
+          reason = `Intent ${intent.predictedIntent} confidence ${intent.confidence.toFixed(2)} >= ${intentThreshold.toFixed(2)}.`;
+        } else {
+          finalResponse = "我需要更多資訊才能做出可靠建議。你可以補充目標職位、目前技能、想做的作品類型，或是否希望避開外部 API。";
+          finalSource = "clarification";
+          confidence = 0.2;
+          reason = "No high-confidence rule matched, FAQ similarity stayed below threshold, and intent confidence was not high enough.";
+        }
+        const trace = { extractedFacts, triggeredRules, retrieval, intent, finalResponse, finalSource, confidence, reason };
+        trace.metrics = {
+          time: performance.now() - started,
+          rules: rules.length,
+          docs: retrieval.searched,
+          memory: Math.max(1, Math.ceil(JSON.stringify(trace).length / 1024)),
+        };
+        return trace;
+      }
+
+      const messages = [{ role: "system", content: "No external AI API connected. Everything runs locally in this HTML page." }];
+
+      function addMessage(role, content, source) {
+        messages.push({ role, content, source });
+        renderMessages();
+      }
+
+      function renderMessages() {
+        document.getElementById("messages").innerHTML = messages.map((message) => `
+          <article class="message ${message.role}">
+            <div class="message-meta"><span>${message.role}</span><span>${message.source || ""}</span></div>
+            <p>${escapeHtml(message.content)}</p>
+          </article>
+        `).join("");
+      }
+
+      function renderDebug(trace) {
+        const debug = document.getElementById("debug");
+        if (!trace) {
+          debug.innerHTML = section("Extracted facts", empty()) + section("Final decision", `<div class="empty">waiting-for-input</div>`);
+          return;
+        }
+        debug.innerHTML =
+          section("Extracted facts", tags(trace.extractedFacts)) +
+          section("Triggered rules", trace.triggeredRules.length ? trace.triggeredRules.map((rule) => `<div class="debug-card"><p>${rule.id}</p><p>${rule.description}</p><p>confidence: ${rule.confidence.toFixed(2)}</p></div>`).join("") : empty()) +
+          section("Query tokens", tags(trace.retrieval.queryTokens)) +
+          section("Matched documents", tags(trace.retrieval.candidateIds)) +
+          section("Retrieval top-k", rows([["threshold", retrievalThreshold.toFixed(2)], ["selected", trace.retrieval.selected?.documentId || "below-threshold"]]) + trace.retrieval.results.map((result, index) => `<div class="debug-card"><p>#${index + 1} ${result.documentId} <strong>${result.similarityScore.toFixed(3)}</strong></p><p>${result.question}</p><p>matched: ${result.matchedTokens.join(", ") || "none"}</p></div>`).join("")) +
+          section("ML intent", rows([["predicted", trace.intent.predictedIntent], ["confidence", trace.intent.confidence.toFixed(3)], ["threshold", intentThreshold.toFixed(2)]]) + `<div class="debug-card"><p>top 3 probabilities</p>${rows(trace.intent.probabilities.map((item) => [item.intent, item.probability.toFixed(3)]))}</div><p class="eyebrow">evidence tokens</p>${tags(trace.intent.evidenceTokens)}`) +
+          section("Final decision", rows([["source", trace.finalSource]]) + `<div class="debug-card">${trace.reason}</div>`);
+      }
+
+      function renderSummary(trace) {
+        document.getElementById("final-response").textContent = trace.finalResponse;
+        document.getElementById("source").textContent = trace.finalSource;
+        document.getElementById("confidence").textContent = `${Math.round(trace.confidence * 100)}%`;
+        document.getElementById("intent").textContent = trace.intent.predictedIntent;
+        document.getElementById("top-score").textContent = (trace.retrieval.results[0]?.similarityScore || 0).toFixed(3);
+        document.getElementById("time").textContent = `${trace.metrics.time.toFixed(2)} ms`;
+        document.getElementById("rules").textContent = trace.metrics.rules;
+        document.getElementById("docs").textContent = trace.metrics.docs;
+        document.getElementById("memory").textContent = `${trace.metrics.memory} KB`;
+      }
+
+      function section(title, content) {
+        return `<section class="debug-section"><h3>${title}</h3>${content}</section>`;
+      }
+
+      function rows(items) {
+        return items.map(([label, value]) => `<div class="trace-row"><span>${label}</span><span>${escapeHtml(String(value))}</span></div>`).join("");
+      }
+
+      function tags(items) {
+        return items.length ? `<div class="tag-list">${items.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("")}</div>` : empty();
+      }
+
+      function empty() {
+        return `<div class="empty">No trace yet.</div>`;
+      }
+
+      function escapeHtml(text) {
+        return text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[char]));
+      }
+
+      document.getElementById("composer").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const input = document.getElementById("input");
+        const value = input.value.trim();
+        if (!value) return;
+        addMessage("user", value);
+        const trace = runInference(value);
+        addMessage("assistant", trace.finalResponse, trace.finalSource);
+        renderSummary(trace);
+        renderDebug(trace);
+        input.value = "";
+      });
+
+      document.getElementById("reset").addEventListener("click", () => {
+        messages.splice(1);
+        renderMessages();
+        renderDebug();
+      });
+
+      renderMessages();
+      renderDebug();
+    </script>
+  </body>
+</html>
