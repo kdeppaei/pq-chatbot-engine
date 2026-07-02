@@ -16,6 +16,7 @@
         --amber: #f59e0b;
         --dark: #14171f;
         --dark-2: #1c2230;
+        --soft-shadow: 0 18px 45px rgba(15, 23, 42, 0.10);
       }
 
       * {
@@ -27,7 +28,8 @@
         min-width: 320px;
         min-height: 100vh;
         color: var(--ink);
-        background: #e8edf2;
+        background:
+          linear-gradient(180deg, #f7fafc 0%, #e8edf2 46%, #dde5ec 100%);
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
@@ -69,6 +71,8 @@
       header {
         padding: 16px 18px;
         border-bottom: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.86);
+        backdrop-filter: blur(10px);
       }
 
       .debug header {
@@ -99,6 +103,25 @@
       h2 {
         font-size: 17px;
         line-height: 1.4;
+      }
+
+      .title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .status-pill {
+        border: 1px solid #9fd6d7;
+        background: #e9fbfb;
+        color: #0f766e;
+        padding: 5px 8px;
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        white-space: nowrap;
       }
 
       .scroll {
@@ -147,10 +170,28 @@
         text-transform: uppercase;
       }
 
+      .message p,
+      #final-response {
+        white-space: pre-wrap;
+      }
+
       .composer {
         padding: 16px;
         border-top: 1px solid var(--line);
         background: var(--panel);
+      }
+
+      .composer-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .key-hint {
+        color: var(--muted);
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 11px;
       }
 
       textarea {
@@ -197,10 +238,16 @@
 
       .answer-card,
       .metric,
-      .debug-card {
+      .debug-card,
+      .pq-card {
         border: 1px solid var(--line);
         background: var(--white);
         padding: 14px;
+      }
+
+      .answer-card {
+        box-shadow: var(--soft-shadow);
+        border-color: #cbd5e1;
       }
 
       .answer-card p:last-child {
@@ -215,6 +262,50 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
         margin-top: 14px;
+      }
+
+      .pq-card {
+        margin-top: 14px;
+        border-color: #cbd5e1;
+        background: #fbfdff;
+      }
+
+      .pq-flow {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr auto 1fr;
+        gap: 10px;
+        align-items: stretch;
+        margin-top: 10px;
+      }
+
+      .pq-node {
+        border: 1px solid #d7dde5;
+        background: #ffffff;
+        padding: 12px;
+        min-height: 92px;
+      }
+
+      .pq-arrow {
+        display: grid;
+        place-items: center;
+        color: var(--signal);
+        font-family: Consolas, ui-monospace, monospace;
+        font-weight: 900;
+      }
+
+      .pq-node-title {
+        color: var(--muted);
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .pq-node-body {
+        margin-top: 8px;
+        color: var(--ink);
+        font-size: 13px;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
       }
 
       .metric .value {
@@ -321,6 +412,14 @@
         .footer {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
+
+        .pq-flow {
+          grid-template-columns: 1fr;
+        }
+
+        .pq-arrow {
+          min-height: 24px;
+        }
       }
     </style>
   </head>
@@ -330,13 +429,19 @@
         <section class="panel">
           <header>
             <p class="eyebrow">Chat Panel</p>
-            <h1>No-API Hybrid Chatbot Engine</h1>
+            <div class="title-row">
+              <h1>No-API Hybrid Chatbot Engine</h1>
+              <span class="status-pill">local only</span>
+            </div>
           </header>
           <div class="scroll">
             <div id="messages" class="messages"></div>
           </div>
           <form id="composer" class="composer">
-            <p class="eyebrow">Input</p>
+            <div class="composer-top">
+              <p class="eyebrow">Input</p>
+              <p class="key-hint">Enter send / Shift+Enter newline</p>
+            </div>
             <textarea id="input" placeholder="例如：我想應徵前端，作品集想做不靠 AI API 的聊天機器人"></textarea>
             <div class="actions">
               <button type="submit">Run Local Inference</button>
@@ -354,6 +459,25 @@
             <div class="answer-card">
               <p class="eyebrow">Final Response</p>
               <p id="final-response">輸入問題後，這裡會顯示本地推理、FAQ 檢索與 intent classifier 的混合決策結果。</p>
+            </div>
+            <div class="pq-card">
+              <p class="eyebrow">P → Q Reasoning Box</p>
+              <div class="pq-flow" id="pq-box">
+                <div class="pq-node">
+                  <p class="pq-node-title">P / Input Facts</p>
+                  <p class="pq-node-body">waiting</p>
+                </div>
+                <div class="pq-arrow">→</div>
+                <div class="pq-node">
+                  <p class="pq-node-title">IF / Matched Rule</p>
+                  <p class="pq-node-body">waiting</p>
+                </div>
+                <div class="pq-arrow">→</div>
+                <div class="pq-node">
+                  <p class="pq-node-title">Q / Selected Output</p>
+                  <p class="pq-node-body">waiting</p>
+                </div>
+              </div>
             </div>
             <div class="metrics-grid">
               <div class="metric"><p class="eyebrow">Source</p><p class="value" id="source">waiting</p></div>
@@ -392,6 +516,11 @@
         ["want_portfolio", [/作品集/i, /portfolio/i, /專案展示/i]],
         ["want_algorithm_project", [/演算法/i, /algorithm/i, /資料結構/i]],
         ["want_no_api_chatbot", [/不靠\s*ai\s*api/i, /no-api/i, /不用\s*api/i, /聊天機器人/i, /chatbot/i]],
+        ["want_enter_submit", [/enter/i, /送出/i, /輸入/i]],
+        ["want_smarter_answer", [/智能/i, /聰明/i, /更準/i, /回答/i, /智慧/i]],
+        ["want_training", [/訓練/i, /training/i, /train/i, /資料/i]],
+        ["want_pq_box", [/pq/i, /p\s*→\s*q/i, /盒子/i, /規則/i]],
+        ["want_better_ui", [/ui/i, /質感/i, /設計/i, /好看/i, /介面/i]],
       ];
 
       const rules = [
@@ -423,6 +552,34 @@
           then: "若目標是前端且 JavaScript 還不熟，建議作品集同時呈現學習路線：DOM、TypeScript、React state、資料結構。",
           confidence: 0.88,
         },
+        {
+          id: "r_iteration_quality",
+          description: "IF want_enter_submit AND want_smarter_answer AND want_better_ui THEN ship_interaction_quality_upgrade",
+          when: ["want_enter_submit", "want_smarter_answer", "want_better_ui"],
+          then: "下一版應該同時升級互動與回答品質：Enter 直接送出、Shift+Enter 換行；回答由 PQ 規則、FAQ 檢索與 intent classifier 共同決策；UI 以 P → Q reasoning box 呈現判斷路徑。",
+          confidence: 0.97,
+        },
+        {
+          id: "r_training_strategy",
+          description: "IF want_smarter_answer AND want_training THEN suggest_training_loop",
+          when: ["want_smarter_answer", "want_training"],
+          then: "訓練方向不是接 LLM，而是擴充 labeled examples：收集使用者問法、標註 intent、補同義詞、觀察錯判案例，再調整 Naive Bayes vocabulary 與 intent template。",
+          confidence: 0.91,
+        },
+        {
+          id: "r_pq_box",
+          description: "IF want_pq_box THEN strengthen_pq_reasoning_box",
+          when: ["want_pq_box"],
+          then: "PQ 盒子應顯示 P/facts、命中的 IF 條件、Q/output 與選擇理由，讓使用者看到系統不是亂答，而是依據明確規則推論。",
+          confidence: 0.9,
+        },
+        {
+          id: "r_ui_polish",
+          description: "IF want_better_ui THEN polish_engineering_tool_ui",
+          when: ["want_better_ui"],
+          then: "UI 可以往工程工具質感調整：更清楚的狀態標籤、穩定間距、可掃描的 debug 區、主回答卡片與 P → Q 視覺流程。",
+          confidence: 0.87,
+        },
       ];
 
       const faqs = [
@@ -431,6 +588,10 @@
         ["faq_no_api_chatbot", "不靠 AI API 可以做聊天機器人嗎？", "可以。可以用規則引擎、FAQ 檢索、意圖分類器與可解釋 debug trace 組成 pseudo chatbot。", ["no_api_chatbot", "project_recommendation"]],
         ["faq_algorithm_frontend", "如何做有演算法感的前端作品？", "把演算法過程視覺化，顯示每一步狀態、決策理由、複雜度與效能指標。", ["algorithm_project", "project_recommendation"]],
         ["faq_professional_portfolio", "如何讓作品集看起來不像大學作業？", "用清楚的產品問題、可操作介面、技術決策記錄、測試與 README，把作品包裝成工程案例。", ["portfolio_advice"]],
+        ["faq_enter_submit", "如何讓聊天輸入更順？", "Enter 送出、Shift+Enter 換行，並在中文輸入法 composing 時避免誤送，能讓聊天體驗更接近正式工具。", ["debug_help", "frontend_learning"]],
+        ["faq_train_intent", "不用 API 要如何讓回答更聰明？", "可以持續擴充 training data、同義詞、FAQ 與 PQ rules，並把錯判案例回寫成新的 labeled examples。", ["no_api_chatbot", "debug_help"]],
+        ["faq_pq_box", "PQ 盒子要怎麼加強？", "PQ 盒子可拆成 P/facts、IF rules、Q/output 與 why selected，讓推理過程能被檢查與調整。", ["debug_help", "project_recommendation"]],
+        ["faq_ui_quality", "如何讓 UI 更有質感？", "把畫面做成工程控制台：主回答有層次、PQ 流程清楚、debug trace 可掃描、metrics 穩定不跳動。", ["portfolio_advice", "frontend_learning"]],
       ].map(([id, question, answer, tags]) => ({ id, question, answer, tags }));
 
       const trainingData = [
@@ -450,6 +611,12 @@
         ["algorithm visualization graph analyzer", "algorithm_project"],
         ["debug panel 為什麼這樣判斷", "debug_help"],
         ["請解釋 confidence similarity score", "debug_help"],
+        ["enter 送出 shift enter 換行", "debug_help"],
+        ["我要讓回答更智能 要怎麼訓練", "debug_help"],
+        ["加強 pq 盒子 顯示規則與理由", "debug_help"],
+        ["ui 設計 更有質感 工程工具", "portfolio_advice"],
+        ["訓練資料 intent classifier 錯判修正", "debug_help"],
+        ["智能回答 要補 faq rules training data", "project_recommendation"],
       ].map(([text, intent]) => ({ text, intent }));
 
       const intentTemplates = {
@@ -459,7 +626,7 @@
         no_api_chatbot: "不靠外部 AI API 也能做 pseudo chatbot：用規則推理、FAQ 檢索、Naive Bayes intent classifier，再用 Debug Panel 解釋每次判斷。",
         frontend_learning: "前端學習可按 JavaScript 基礎、TypeScript 型別、React state、資料處理、效能與測試逐步建立，並把每一步落成作品功能。",
         algorithm_project: "有演算法感的前端作品適合做視覺化：顯示 token、index、graph traversal、score 計算與每一步狀態，讓邏輯透明可驗證。",
-        debug_help: "你可以從右側 Debug Panel 看判斷流程：facts 來自關鍵詞抽取，rules 顯示命中條件，retrieval 顯示相似度，intent 顯示分類機率。",
+        debug_help: "你可以從右側 Debug Panel 看判斷流程：facts 來自關鍵詞抽取，rules 顯示命中條件，retrieval 顯示相似度，intent 顯示分類機率；若要更準，就把錯判問句補回 FAQ、PQ rules 或 training data。",
       };
 
       const synonyms = [
@@ -490,6 +657,12 @@
         ["state", ["state", "狀態管理", "狀態"]],
         ["test", ["test", "testing", "測試"]],
         ["faq", ["faq", "問題", "答案"]],
+        ["enter_submit", ["enter", "送出", "按 enter", "enter 就能輸入", "enter 就能送出"]],
+        ["newline", ["shift enter", "換行", "多行輸入"]],
+        ["smart_answer", ["智能", "智慧", "聰明", "更準", "回答品質", "智能回答"]],
+        ["training", ["訓練", "training", "train", "訓練資料", "labeled examples", "錯判"]],
+        ["pq_box", ["pq", "p q", "p→q", "pq盒子", "pq 盒子", "盒子"]],
+        ["ui_quality", ["質感", "好看", "ui設計", "ui 設計", "介面", "polish"]],
       ];
 
       const aliasMap = new Map();
@@ -678,6 +851,7 @@
           confidence = 0.2;
           reason = "No high-confidence rule matched, FAQ similarity stayed below threshold, and intent confidence was not high enough.";
         }
+        finalResponse = composeSmartResponse(finalResponse, { extractedFacts, triggeredRules, retrieval, intent });
         const trace = { extractedFacts, triggeredRules, retrieval, intent, finalResponse, finalSource, confidence, reason };
         trace.metrics = {
           time: performance.now() - started,
@@ -686,6 +860,30 @@
           memory: Math.max(1, Math.ceil(JSON.stringify(trace).length / 1024)),
         };
         return trace;
+      }
+
+      function composeSmartResponse(base, context) {
+        const nextStep = suggestNextStep(context);
+        const evidence = context.triggeredRules[0]
+          ? `命中規則：${context.triggeredRules[0].id}`
+          : context.retrieval.results[0]
+            ? `最相似 FAQ：${context.retrieval.results[0].documentId} / ${context.retrieval.results[0].similarityScore.toFixed(3)}`
+            : `預測 intent：${context.intent.predictedIntent} / ${context.intent.confidence.toFixed(3)}`;
+        return `${base}\n\n下一步：${nextStep}\n依據：${evidence}。`;
+      }
+
+      function suggestNextStep(context) {
+        const facts = new Set(context.extractedFacts);
+        if (facts.has("want_training") && facts.has("want_pq_box") && facts.has("want_better_ui")) {
+          return "先把這次需求拆成三個可驗證升級：補 trainingData 讓 intent 更準、補 PQ rule 讓規則命中更明確、補 UI reasoning box 讓推理更有質感。";
+        }
+        if (facts.has("want_enter_submit")) return "已支援 Enter 送出、Shift+Enter 換行；若接下來要更像產品，可以加 command history 與範例 prompt。";
+        if (facts.has("want_training")) return "把實際錯判句子收集成 text + intent，補進 trainingData，再觀察 top 3 probability 是否更集中。";
+        if (facts.has("want_pq_box")) return "把 P/facts、IF/rules、Q/output 固定顯示在中間區，並用右側 debug trace 驗證每一步。";
+        if (facts.has("want_better_ui")) return "優先整理資訊層級：主回答、PQ reasoning、metrics、debug trace 各自承擔一種任務。";
+        if (context.intent.predictedIntent === "algorithm_project") return "把演算法步驟拆成可視化 state transitions，讓作品展示你真的懂邏輯。";
+        if (context.intent.predictedIntent === "skill_gap") return "把缺口轉成 roadmap，再把 roadmap 的每一步做成可展示的小功能。";
+        return "補一個更具體的目標或限制，系統會同時用 PQ rules、FAQ similarity 與 intent probability 重新判斷。";
       }
 
       const messages = [{ role: "system", content: "No external AI API connected. Everything runs locally in this HTML page." }];
@@ -730,6 +928,27 @@
         document.getElementById("rules").textContent = trace.metrics.rules;
         document.getElementById("docs").textContent = trace.metrics.docs;
         document.getElementById("memory").textContent = `${trace.metrics.memory} KB`;
+        renderPQBox(trace);
+      }
+
+      function renderPQBox(trace) {
+        const bestRule = trace.triggeredRules[0];
+        document.getElementById("pq-box").innerHTML = `
+          <div class="pq-node">
+            <p class="pq-node-title">P / Input Facts</p>
+            <p class="pq-node-body">${escapeHtml(trace.extractedFacts.join(", ") || "no symbolic facts")}</p>
+          </div>
+          <div class="pq-arrow">→</div>
+          <div class="pq-node">
+            <p class="pq-node-title">IF / Matched Rule</p>
+            <p class="pq-node-body">${escapeHtml(bestRule ? `${bestRule.id}: ${bestRule.description}` : "No high-confidence PQ rule; fallback to retrieval or intent.")}</p>
+          </div>
+          <div class="pq-arrow">→</div>
+          <div class="pq-node">
+            <p class="pq-node-title">Q / Selected Output</p>
+            <p class="pq-node-body">${escapeHtml(trace.finalSource)} · ${Math.round(trace.confidence * 100)}%</p>
+          </div>
+        `;
       }
 
       function section(title, content) {
@@ -765,10 +984,49 @@
         input.value = "";
       });
 
+      const chatInput = document.getElementById("input");
+      let isComposing = false;
+      chatInput.addEventListener("compositionstart", () => {
+        isComposing = true;
+      });
+      chatInput.addEventListener("compositionend", () => {
+        isComposing = false;
+      });
+      chatInput.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || event.shiftKey || isComposing) return;
+        event.preventDefault();
+        document.getElementById("composer").requestSubmit();
+      });
+
       document.getElementById("reset").addEventListener("click", () => {
         messages.splice(1);
         renderMessages();
         renderDebug();
+        document.getElementById("final-response").textContent = "輸入問題後，這裡會顯示本地推理、FAQ 檢索與 intent classifier 的混合決策結果。";
+        document.getElementById("source").textContent = "waiting";
+        document.getElementById("confidence").textContent = "0%";
+        document.getElementById("intent").textContent = "none";
+        document.getElementById("top-score").textContent = "0.000";
+        document.getElementById("time").textContent = "0.00 ms";
+        document.getElementById("rules").textContent = "0";
+        document.getElementById("docs").textContent = "0";
+        document.getElementById("memory").textContent = "0 KB";
+        document.getElementById("pq-box").innerHTML = `
+          <div class="pq-node">
+            <p class="pq-node-title">P / Input Facts</p>
+            <p class="pq-node-body">waiting</p>
+          </div>
+          <div class="pq-arrow">→</div>
+          <div class="pq-node">
+            <p class="pq-node-title">IF / Matched Rule</p>
+            <p class="pq-node-body">waiting</p>
+          </div>
+          <div class="pq-arrow">→</div>
+          <div class="pq-node">
+            <p class="pq-node-title">Q / Selected Output</p>
+            <p class="pq-node-body">waiting</p>
+          </div>
+        `;
       });
 
       renderMessages();
