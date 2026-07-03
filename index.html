@@ -3,20 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>No-API Hybrid Chatbot Engine</title>
+    <title>Topological Rule-based Chatbot Engine</title>
     <style>
       :root {
-        --ink: #111827;
+        --ink: #101418;
         --muted: #667085;
-        --panel: #f3f6f8;
-        --line: #d7dde5;
+        --line: #d8dee6;
+        --panel: #f4f7fa;
         --white: #ffffff;
-        --signal: #0f8b8d;
-        --cyan: #dff7f7;
-        --amber: #f59e0b;
-        --dark: #14171f;
-        --dark-2: #1c2230;
-        --soft-shadow: 0 18px 45px rgba(15, 23, 42, 0.10);
+        --teal: #0f8b8d;
+        --teal-soft: #e1f7f7;
+        --amber: #b45309;
+        --dark: #121722;
+        --dark-2: #1b2331;
+        --shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
       }
 
       * {
@@ -28,8 +28,7 @@
         min-width: 320px;
         min-height: 100vh;
         color: var(--ink);
-        background:
-          linear-gradient(180deg, #f7fafc 0%, #e8edf2 46%, #dde5ec 100%);
+        background: linear-gradient(180deg, #f7fafc 0%, #e8edf3 100%);
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
@@ -45,9 +44,9 @@
       }
 
       .workspace {
-        display: grid;
-        grid-template-columns: 380px minmax(360px, 1fr) 430px;
         min-height: 0;
+        display: grid;
+        grid-template-columns: 360px minmax(420px, 1fr) 430px;
       }
 
       .panel {
@@ -58,7 +57,7 @@
         background: var(--white);
       }
 
-      .answer {
+      .center {
         background: var(--panel);
       }
 
@@ -76,20 +75,8 @@
       }
 
       .debug header {
+        background: #111827;
         border-bottom-color: #334155;
-      }
-
-      .eyebrow {
-        margin: 0 0 4px;
-        color: var(--muted);
-        font-family: Consolas, ui-monospace, monospace;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
-
-      .debug .eyebrow {
-        color: #94a3b8;
       }
 
       h1,
@@ -101,27 +88,40 @@
 
       h1,
       h2 {
-        font-size: 17px;
-        line-height: 1.4;
+        font-size: 18px;
+        line-height: 1.35;
+      }
+
+      .eyebrow {
+        margin-bottom: 5px;
+        color: var(--muted);
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .debug .eyebrow {
+        color: #94a3b8;
       }
 
       .title-row {
         display: flex;
-        align-items: center;
         justify-content: space-between;
         gap: 12px;
+        align-items: center;
       }
 
-      .status-pill {
+      .pill {
         border: 1px solid #9fd6d7;
-        background: #e9fbfb;
+        background: var(--teal-soft);
         color: #0f766e;
         padding: 5px 8px;
         font-family: Consolas, ui-monospace, monospace;
         font-size: 11px;
         font-weight: 800;
-        text-transform: uppercase;
         white-space: nowrap;
+        text-transform: uppercase;
       }
 
       .scroll {
@@ -141,22 +141,22 @@
         border: 1px solid var(--line);
         background: var(--white);
         padding: 12px;
-        line-height: 1.65;
         font-size: 14px;
+        line-height: 1.65;
       }
 
       .message.user {
-        margin-left: 32px;
-        border-color: var(--signal);
-        background: var(--cyan);
+        margin-left: 28px;
+        border-color: var(--teal);
+        background: var(--teal-soft);
       }
 
       .message.system {
+        color: #92400e;
+        border-color: #f6d28b;
+        background: #fff7ed;
         font-family: Consolas, ui-monospace, monospace;
         font-size: 12px;
-        color: #92400e;
-        border-color: #f8d391;
-        background: #fff7ed;
       }
 
       .message-meta {
@@ -171,7 +171,7 @@
       }
 
       .message p,
-      #final-response {
+      #answer {
         white-space: pre-wrap;
       }
 
@@ -183,9 +183,9 @@
 
       .composer-top {
         display: flex;
-        align-items: center;
         justify-content: space-between;
         gap: 12px;
+        align-items: center;
       }
 
       .key-hint {
@@ -196,18 +196,17 @@
 
       textarea {
         width: 100%;
-        min-height: 112px;
+        min-height: 120px;
         resize: vertical;
         border: 1px solid var(--line);
-        background: var(--white);
-        color: var(--ink);
-        padding: 12px;
         outline: none;
+        background: var(--white);
+        padding: 12px;
         line-height: 1.6;
       }
 
       textarea:focus {
-        border-color: var(--signal);
+        border-color: var(--teal);
       }
 
       .actions {
@@ -222,55 +221,59 @@
         background: var(--ink);
         color: var(--white);
         padding: 11px 14px;
-        font-weight: 700;
+        font-weight: 800;
         cursor: pointer;
       }
 
       button.secondary {
         color: var(--ink);
-        background: var(--white);
         border-color: var(--line);
+        background: var(--white);
       }
 
-      button:hover {
-        filter: brightness(1.06);
-      }
-
-      .answer-card,
+      .card,
       .metric,
-      .debug-card,
-      .pq-card {
+      .trace-card {
         border: 1px solid var(--line);
         background: var(--white);
         padding: 14px;
       }
 
-      .answer-card {
-        box-shadow: var(--soft-shadow);
+      .card.primary {
+        box-shadow: var(--shadow);
         border-color: #cbd5e1;
       }
 
-      .answer-card p:last-child {
-        margin-top: 8px;
-        font-size: 18px;
-        font-weight: 700;
-        line-height: 1.75;
+      .card + .card {
+        margin-top: 12px;
       }
 
-      .metrics-grid {
+      .card-body {
+        margin-top: 8px;
+        font-size: 14px;
+        line-height: 1.65;
+      }
+
+      .answer-text {
+        font-size: 18px;
+        font-weight: 800;
+        line-height: 1.7;
+      }
+
+      .grid-2 {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
-        margin-top: 14px;
+        margin-top: 12px;
       }
 
-      .pq-card {
-        margin-top: 14px;
-        border-color: #cbd5e1;
-        background: #fbfdff;
+      .metric .value {
+        margin-top: 6px;
+        font-weight: 800;
+        overflow-wrap: anywhere;
       }
 
-      .pq-flow {
+      .graph-flow {
         display: grid;
         grid-template-columns: 1fr auto 1fr auto 1fr;
         gap: 10px;
@@ -278,39 +281,32 @@
         margin-top: 10px;
       }
 
-      .pq-node {
+      .graph-node {
         border: 1px solid #d7dde5;
-        background: #ffffff;
+        background: #fbfdff;
         padding: 12px;
         min-height: 92px;
       }
 
-      .pq-arrow {
+      .graph-arrow {
         display: grid;
         place-items: center;
-        color: var(--signal);
+        color: var(--teal);
         font-family: Consolas, ui-monospace, monospace;
         font-weight: 900;
       }
 
-      .pq-node-title {
+      .node-title {
         color: var(--muted);
         font-family: Consolas, ui-monospace, monospace;
         font-size: 11px;
         text-transform: uppercase;
       }
 
-      .pq-node-body {
+      .node-body {
         margin-top: 8px;
-        color: var(--ink);
         font-size: 13px;
         line-height: 1.55;
-        overflow-wrap: anywhere;
-      }
-
-      .metric .value {
-        margin-top: 6px;
-        font-weight: 800;
         overflow-wrap: anywhere;
       }
 
@@ -323,12 +319,11 @@
         color: #94a3b8;
         font-family: Consolas, ui-monospace, monospace;
         font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
         letter-spacing: 0.04em;
+        text-transform: uppercase;
       }
 
-      .debug-card {
+      .trace-card {
         color: #e2e8f0;
         border-color: #334155;
         background: var(--dark-2);
@@ -398,26 +393,23 @@
         border: 0;
       }
 
-      @media (max-width: 1120px) {
+      @media (max-width: 1180px) {
         .workspace {
           grid-template-columns: 1fr;
         }
 
         .panel {
-          min-height: 520px;
+          min-height: 540px;
           border-right: 0;
           border-bottom: 1px solid var(--line);
         }
 
+        .graph-flow,
         .footer {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .pq-flow {
           grid-template-columns: 1fr;
         }
 
-        .pq-arrow {
+        .graph-arrow {
           min-height: 24px;
         }
       }
@@ -430,8 +422,8 @@
           <header>
             <p class="eyebrow">Chat Panel</p>
             <div class="title-row">
-              <h1>No-API Hybrid Chatbot Engine</h1>
-              <span class="status-pill">local only</span>
+              <h1>Topological Rule-based Chatbot Engine</h1>
+              <span class="pill">no api</span>
             </div>
           </header>
           <div class="scroll">
@@ -442,56 +434,70 @@
               <p class="eyebrow">Input</p>
               <p class="key-hint">Enter send / Shift+Enter newline</p>
             </div>
-            <textarea id="input" placeholder="例如：我想應徵前端，作品集想做不靠 AI API 的聊天機器人"></textarea>
+            <textarea id="input" placeholder="例如：我要做不靠 API 的可解釋拓樸規則 chatbot，用 React 部署成作品集"></textarea>
             <div class="actions">
-              <button type="submit">Run Local Inference</button>
+              <button type="submit">Run Topological Inference</button>
               <button type="button" class="secondary" id="reset">Reset</button>
             </div>
           </form>
         </section>
 
-        <section class="panel answer">
+        <section class="panel center">
           <header>
-            <p class="eyebrow">Answer / Recommendation</p>
-            <h2>Hybrid Decision Output</h2>
+            <p class="eyebrow">Inference Workspace</p>
+            <h2>Closure + Recommendation</h2>
           </header>
           <div class="scroll">
-            <div class="answer-card">
+            <article class="card primary">
               <p class="eyebrow">Final Response</p>
-              <p id="final-response">輸入問題後，這裡會顯示本地推理、FAQ 檢索與 intent classifier 的混合決策結果。</p>
-            </div>
-            <div class="pq-card">
-              <p class="eyebrow">P → Q Reasoning Box</p>
-              <div class="pq-flow" id="pq-box">
-                <div class="pq-node">
-                  <p class="pq-node-title">P / Input Facts</p>
-                  <p class="pq-node-body">waiting</p>
+              <p id="answer" class="answer-text">輸入一句話後，系統會抽取 facts、依拓樸順序套用 rule graph、推出 closure facts，並用 concept distance 排序推薦。</p>
+            </article>
+
+            <article class="card">
+              <p class="eyebrow">Reasoning Path</p>
+              <div class="graph-flow" id="reasoning-path">
+                <div class="graph-node">
+                  <p class="node-title">Facts</p>
+                  <p class="node-body">waiting</p>
                 </div>
-                <div class="pq-arrow">→</div>
-                <div class="pq-node">
-                  <p class="pq-node-title">IF / Matched Rule</p>
-                  <p class="pq-node-body">waiting</p>
+                <div class="graph-arrow">→</div>
+                <div class="graph-node">
+                  <p class="node-title">Topological Rules</p>
+                  <p class="node-body">waiting</p>
                 </div>
-                <div class="pq-arrow">→</div>
-                <div class="pq-node">
-                  <p class="pq-node-title">Q / Selected Output</p>
-                  <p class="pq-node-body">waiting</p>
+                <div class="graph-arrow">→</div>
+                <div class="graph-node">
+                  <p class="node-title">Closure / Ranking</p>
+                  <p class="node-body">waiting</p>
                 </div>
               </div>
-            </div>
-            <div class="metrics-grid">
-              <div class="metric"><p class="eyebrow">Source</p><p class="value" id="source">waiting</p></div>
-              <div class="metric"><p class="eyebrow">Confidence</p><p class="value" id="confidence">0%</p></div>
-              <div class="metric"><p class="eyebrow">Intent</p><p class="value" id="intent">none</p></div>
-              <div class="metric"><p class="eyebrow">Top FAQ Score</p><p class="value" id="top-score">0.000</p></div>
+            </article>
+
+            <div class="grid-2">
+              <article class="card">
+                <p class="eyebrow">Fact Extraction Panel</p>
+                <div id="fact-panel" class="card-body">No facts yet.</div>
+              </article>
+              <article class="card">
+                <p class="eyebrow">Inference Closure Panel</p>
+                <div id="closure-panel" class="card-body">No closure yet.</div>
+              </article>
+              <article class="card">
+                <p class="eyebrow">Triggered Rules Panel</p>
+                <div id="rules-panel" class="card-body">No triggered rules yet.</div>
+              </article>
+              <article class="card">
+                <p class="eyebrow">Recommendation Ranking Panel</p>
+                <div id="ranking-panel" class="card-body">No ranking yet.</div>
+              </article>
             </div>
           </div>
         </section>
 
         <aside class="panel debug">
           <header>
-            <p class="eyebrow">Explainable Debug Panel</p>
-            <h2>Reasoning Trace</h2>
+            <p class="eyebrow">Rule Graph Debug Panel</p>
+            <h2>Topo Sort / SCC / Graph Distance</h2>
           </header>
           <div class="scroll" id="debug"></div>
         </aside>
@@ -499,394 +505,284 @@
 
       <footer class="footer">
         <div class="metric"><p class="eyebrow">Inference Time</p><p class="value" id="time">0.00 ms</p></div>
-        <div class="metric"><p class="eyebrow">Rules Checked</p><p class="value" id="rules">0</p></div>
-        <div class="metric"><p class="eyebrow">Candidate Docs</p><p class="value" id="docs">0</p></div>
-        <div class="metric"><p class="eyebrow">Memory Estimate</p><p class="value" id="memory">0 KB</p></div>
-        <div class="metric"><p class="eyebrow">Worker Status</p><p class="value">planned</p></div>
+        <div class="metric"><p class="eyebrow">Graph Nodes</p><p class="value" id="nodes">0</p></div>
+        <div class="metric"><p class="eyebrow">Rules Checked</p><p class="value" id="rule-count">0</p></div>
+        <div class="metric"><p class="eyebrow">Closure Facts</p><p class="value" id="closure-count">0</p></div>
+        <div class="metric"><p class="eyebrow">Cycle Status</p><p class="value" id="cycle-status">unknown</p></div>
       </footer>
     </main>
 
     <script>
-      const facts = [
-        ["goal_frontend", [/前端/i, /frontend/i, /front-end/i]],
-        ["skill_html", [/html/i]],
-        ["skill_css", [/css/i]],
-        ["skill_python", [/python/i]],
-        ["lack_javascript", [/不會\s*javascript/i, /不熟\s*javascript/i, /不會\s*js/i, /缺乏\s*js/i]],
-        ["want_portfolio", [/作品集/i, /portfolio/i, /專案展示/i]],
-        ["want_algorithm_project", [/演算法/i, /algorithm/i, /資料結構/i]],
-        ["want_no_api_chatbot", [/不靠\s*ai\s*api/i, /no-api/i, /不用\s*api/i, /聊天機器人/i, /chatbot/i]],
-        ["want_enter_submit", [/enter/i, /送出/i, /輸入/i]],
-        ["want_smarter_answer", [/智能/i, /聰明/i, /更準/i, /回答/i, /智慧/i]],
-        ["want_training", [/訓練/i, /training/i, /train/i, /資料/i]],
-        ["want_pq_box", [/pq/i, /p\s*→\s*q/i, /盒子/i, /規則/i]],
-        ["want_better_ui", [/ui/i, /質感/i, /設計/i, /好看/i, /介面/i]],
-      ];
+      const factNodes = [
+        ["goal_frontend", "Goal: Frontend", "User wants frontend work.", [/前端/i, /frontend/i, /網頁工程師/i]],
+        ["want_portfolio", "Want Portfolio", "User asks for portfolio or showcase.", [/作品集/i, /portfolio/i, /專案展示/i]],
+        ["skill_python", "Skill: Python", "User knows Python.", [/python/i]],
+        ["skill_html", "Skill: HTML", "User knows HTML.", [/html/i]],
+        ["lack_javascript", "Gap: JavaScript", "User lacks JavaScript.", [/不會\s*javascript/i, /不熟\s*javascript/i, /不會\s*js/i]],
+        ["want_no_api", "No API", "User wants no external AI API.", [/不用\s*api/i, /不靠\s*api/i, /no-api/i, /不靠\s*ai\s*api/i]],
+        ["want_graph_logic", "Graph Logic", "User wants graph/topology/algorithm.", [/拓樸/i, /topological/i, /圖論/i, /graph/i, /演算法/i]],
+        ["want_explainable", "Explainable", "User wants explainable reasoning.", [/可解釋/i, /explain/i, /reasoning/i, /推理路徑/i]],
+        ["prefer_react", "Prefer React", "User asks for React.", [/react/i]],
+        ["need_deploy", "Need Deploy", "User asks for deployment.", [/部署/i, /github pages/i, /試用/i]],
+        ["derive_portfolio_tool", "Portfolio Tool", "Derived portfolio tool recommendation."],
+        ["derive_js_learning_path", "JS Learning Path", "Derived JavaScript learning path."],
+        ["derive_topological_chatbot", "Topological Chatbot", "Derived topological chatbot recommendation."],
+        ["derive_graph_visualizer", "Graph Visualizer", "Derived graph visualization recommendation."],
+        ["derive_debug_panel", "Debug Panel", "Derived explainable debug panel."],
+        ["derive_static_deploy", "Static Deploy", "Derived static deployment recommendation."],
+      ].map(([id, label, description, patterns]) => ({ id, label, description, patterns: patterns || [] }));
 
       const rules = [
         {
-          id: "r_frontend_portfolio",
-          description: "IF goal_frontend AND want_portfolio THEN suggest_frontend_project",
-          when: ["goal_frontend", "want_portfolio"],
-          then: "建議做一個前端工程工具型作品集：包含可互動流程、狀態視覺化、資料處理與清楚的技術說明。",
-          confidence: 0.92,
+          id: "rule_frontend_portfolio",
+          label: "Frontend + Portfolio -> Portfolio Tool",
+          prerequisites: ["goal_frontend", "want_portfolio"],
+          conclusions: ["derive_portfolio_tool"],
+          hint: "Build an interactive engineering portfolio tool instead of a static resume page.",
+          weight: 0.92,
         },
         {
-          id: "r_python_algorithm",
-          description: "IF skill_python AND want_algorithm_project THEN suggest_graph_analyzer",
-          when: ["skill_python", "want_algorithm_project"],
-          then: "你可以做 Graph Analyzer：把 Python/演算法能力轉成前端互動圖形，例如 BFS、DFS、最短路徑視覺化。",
-          confidence: 0.86,
+          id: "rule_js_gap",
+          label: "Frontend + JS Gap -> JS Learning Path",
+          prerequisites: ["goal_frontend", "lack_javascript"],
+          conclusions: ["derive_js_learning_path"],
+          hint: "Expose a JavaScript learning path as part of the product narrative.",
+          weight: 0.88,
         },
         {
-          id: "r_no_api_chatbot",
-          description: "IF want_no_api_chatbot THEN suggest_symbolic_chatbot",
-          when: ["want_no_api_chatbot"],
-          then: "可以做 No-API Hybrid Chatbot Engine：用規則推理、FAQ 檢索與小型分類器組成可解釋聊天系統。",
-          confidence: 0.95,
+          id: "rule_topological_engine",
+          label: "No API + Graph Logic + Explainable -> Topological Chatbot",
+          prerequisites: ["want_no_api", "want_graph_logic", "want_explainable"],
+          conclusions: ["derive_topological_chatbot", "derive_debug_panel"],
+          hint: "Use facts as nodes, rules as rule nodes, topological order, SCC, and closure.",
+          weight: 0.98,
         },
         {
-          id: "r_frontend_js_gap",
-          description: "IF goal_frontend AND lack_javascript THEN suggest_learn_javascript",
-          when: ["goal_frontend", "lack_javascript"],
-          then: "若目標是前端且 JavaScript 還不熟，建議作品集同時呈現學習路線：DOM、TypeScript、React state、資料結構。",
-          confidence: 0.88,
+          id: "rule_python_graph",
+          label: "Python + Graph Logic -> Graph Visualizer",
+          prerequisites: ["skill_python", "want_graph_logic"],
+          conclusions: ["derive_graph_visualizer"],
+          hint: "Turn Python graph intuition into an interactive frontend visualization.",
+          weight: 0.84,
         },
         {
-          id: "r_iteration_quality",
-          description: "IF want_enter_submit AND want_smarter_answer AND want_better_ui THEN ship_interaction_quality_upgrade",
-          when: ["want_enter_submit", "want_smarter_answer", "want_better_ui"],
-          then: "下一版應該同時升級互動與回答品質：Enter 直接送出、Shift+Enter 換行；回答由 PQ 規則、FAQ 檢索與 intent classifier 共同決策；UI 以 P → Q reasoning box 呈現判斷路徑。",
-          confidence: 0.97,
+          id: "rule_debug_panel",
+          label: "Explainable + Portfolio Tool -> Debug Panel",
+          prerequisites: ["want_explainable", "derive_portfolio_tool"],
+          conclusions: ["derive_debug_panel"],
+          hint: "Show extracted facts, fired rules, closure facts, rank scores, and reasoning path.",
+          weight: 0.9,
         },
         {
-          id: "r_training_strategy",
-          description: "IF want_smarter_answer AND want_training THEN suggest_training_loop",
-          when: ["want_smarter_answer", "want_training"],
-          then: "訓練方向不是接 LLM，而是擴充 labeled examples：收集使用者問法、標註 intent、補同義詞、觀察錯判案例，再調整 Naive Bayes vocabulary 與 intent template。",
-          confidence: 0.91,
-        },
-        {
-          id: "r_pq_box",
-          description: "IF want_pq_box THEN strengthen_pq_reasoning_box",
-          when: ["want_pq_box"],
-          then: "PQ 盒子應顯示 P/facts、命中的 IF 條件、Q/output 與選擇理由，讓使用者看到系統不是亂答，而是依據明確規則推論。",
-          confidence: 0.9,
-        },
-        {
-          id: "r_ui_polish",
-          description: "IF want_better_ui THEN polish_engineering_tool_ui",
-          when: ["want_better_ui"],
-          then: "UI 可以往工程工具質感調整：更清楚的狀態標籤、穩定間距、可掃描的 debug 區、主回答卡片與 P → Q 視覺流程。",
-          confidence: 0.87,
+          id: "rule_static_deploy",
+          label: "React Preference + Deploy -> Static Deploy",
+          prerequisites: ["prefer_react", "need_deploy"],
+          conclusions: ["derive_static_deploy"],
+          hint: "Keep a static Pages demo while maintaining React/TypeScript source modules.",
+          weight: 0.8,
         },
       ];
 
-      const faqs = [
-        ["faq_frontend_portfolio", "我想應徵前端，作品集要做什麼？", "建議做能展示狀態管理、資料處理、UI 細節與工程思維的互動工具，而不只是靜態頁面。", ["portfolio_advice", "frontend_learning"]],
-        ["faq_python_html_no_js", "我會 Python 和 HTML，但不會 JavaScript，適合做什麼？", "可以從 TypeScript 小工具開始，把 Python 的邏輯能力轉成前端互動，例如規則引擎或圖論視覺化。", ["skill_gap", "frontend_learning"]],
-        ["faq_no_api_chatbot", "不靠 AI API 可以做聊天機器人嗎？", "可以。可以用規則引擎、FAQ 檢索、意圖分類器與可解釋 debug trace 組成 pseudo chatbot。", ["no_api_chatbot", "project_recommendation"]],
-        ["faq_algorithm_frontend", "如何做有演算法感的前端作品？", "把演算法過程視覺化，顯示每一步狀態、決策理由、複雜度與效能指標。", ["algorithm_project", "project_recommendation"]],
-        ["faq_professional_portfolio", "如何讓作品集看起來不像大學作業？", "用清楚的產品問題、可操作介面、技術決策記錄、測試與 README，把作品包裝成工程案例。", ["portfolio_advice"]],
-        ["faq_enter_submit", "如何讓聊天輸入更順？", "Enter 送出、Shift+Enter 換行，並在中文輸入法 composing 時避免誤送，能讓聊天體驗更接近正式工具。", ["debug_help", "frontend_learning"]],
-        ["faq_train_intent", "不用 API 要如何讓回答更聰明？", "可以持續擴充 training data、同義詞、FAQ 與 PQ rules，並把錯判案例回寫成新的 labeled examples。", ["no_api_chatbot", "debug_help"]],
-        ["faq_pq_box", "PQ 盒子要怎麼加強？", "PQ 盒子可拆成 P/facts、IF rules、Q/output 與 why selected，讓推理過程能被檢查與調整。", ["debug_help", "project_recommendation"]],
-        ["faq_ui_quality", "如何讓 UI 更有質感？", "把畫面做成工程控制台：主回答有層次、PQ 流程清楚、debug trace 可掃描、metrics 穩定不跳動。", ["portfolio_advice", "frontend_learning"]],
-      ].map(([id, question, answer, tags]) => ({ id, question, answer, tags }));
-
-      const trainingData = [
-        ["我想應徵前端 作品集 要做什麼", "portfolio_advice"],
-        ["portfolio 專案展示 怎麼安排 比較專業", "portfolio_advice"],
-        ["如何讓作品集 不像大學作業", "portfolio_advice"],
-        ["我會 python html 但不會 javascript", "skill_gap"],
-        ["缺乏 js 基礎 可以做什麼專案", "skill_gap"],
-        ["不熟 typescript react 要怎麼補技能", "skill_gap"],
-        ["請推薦 前端 portfolio project", "project_recommendation"],
-        ["想要作品集 專案推薦", "project_recommendation"],
-        ["不靠 AI API 可以做 chatbot 嗎", "no_api_chatbot"],
-        ["no api 聊天機器人 怎麼實作", "no_api_chatbot"],
-        ["前端 要先學 javascript 還是 react", "frontend_learning"],
-        ["網頁工程師 學習路線", "frontend_learning"],
-        ["演算法 感 的 前端作品", "algorithm_project"],
-        ["algorithm visualization graph analyzer", "algorithm_project"],
-        ["debug panel 為什麼這樣判斷", "debug_help"],
-        ["請解釋 confidence similarity score", "debug_help"],
-        ["enter 送出 shift enter 換行", "debug_help"],
-        ["我要讓回答更智能 要怎麼訓練", "debug_help"],
-        ["加強 pq 盒子 顯示規則與理由", "debug_help"],
-        ["ui 設計 更有質感 工程工具", "portfolio_advice"],
-        ["訓練資料 intent classifier 錯判修正", "debug_help"],
-        ["智能回答 要補 faq rules training data", "project_recommendation"],
-      ].map(([text, intent]) => ({ text, intent }));
-
-      const intentTemplates = {
-        portfolio_advice: "作品集建議聚焦在可操作的工程作品：清楚問題、互動流程、資料處理、狀態管理、debug trace，以及 README 中的技術決策。",
-        skill_gap: "你可以把技能缺口變成作品亮點：先用 TypeScript 補 JavaScript 基礎，再做小型工具展示資料流、狀態管理與測試。",
-        project_recommendation: "建議做一個工程工具型專案，例如 No-API chatbot、演算法視覺化、FAQ retrieval explorer，重點是讓面試官能操作與檢查推理過程。",
-        no_api_chatbot: "不靠外部 AI API 也能做 pseudo chatbot：用規則推理、FAQ 檢索、Naive Bayes intent classifier，再用 Debug Panel 解釋每次判斷。",
-        frontend_learning: "前端學習可按 JavaScript 基礎、TypeScript 型別、React state、資料處理、效能與測試逐步建立，並把每一步落成作品功能。",
-        algorithm_project: "有演算法感的前端作品適合做視覺化：顯示 token、index、graph traversal、score 計算與每一步狀態，讓邏輯透明可驗證。",
-        debug_help: "你可以從右側 Debug Panel 看判斷流程：facts 來自關鍵詞抽取，rules 顯示命中條件，retrieval 顯示相似度，intent 顯示分類機率；若要更準，就把錯判問句補回 FAQ、PQ rules 或 training data。",
+      const conceptNeighbors = {
+        goal_frontend: ["want_portfolio", "prefer_react", "derive_portfolio_tool", "derive_js_learning_path"],
+        want_portfolio: ["goal_frontend", "derive_portfolio_tool", "derive_debug_panel"],
+        skill_python: ["want_graph_logic", "derive_graph_visualizer"],
+        skill_html: ["goal_frontend", "prefer_react"],
+        lack_javascript: ["goal_frontend", "derive_js_learning_path"],
+        want_no_api: ["want_graph_logic", "want_explainable", "derive_topological_chatbot"],
+        want_graph_logic: ["skill_python", "want_no_api", "derive_topological_chatbot", "derive_graph_visualizer"],
+        want_explainable: ["want_no_api", "derive_debug_panel"],
+        prefer_react: ["goal_frontend", "need_deploy", "derive_static_deploy"],
+        need_deploy: ["prefer_react", "derive_static_deploy"],
+        derive_portfolio_tool: ["goal_frontend", "want_portfolio", "derive_debug_panel"],
+        derive_js_learning_path: ["goal_frontend", "lack_javascript"],
+        derive_topological_chatbot: ["want_no_api", "want_graph_logic", "derive_debug_panel"],
+        derive_graph_visualizer: ["skill_python", "want_graph_logic"],
+        derive_debug_panel: ["want_explainable", "derive_topological_chatbot", "derive_portfolio_tool"],
+        derive_static_deploy: ["prefer_react", "need_deploy"],
       };
 
-      const synonyms = [
-        ["frontend", ["前端", "frontend", "front end", "front-end", "網頁工程師", "網頁開發"]],
-        ["portfolio", ["作品集", "portfolio", "專案展示", "作品展示"]],
-        ["javascript", ["javascript", "java script", "js"]],
-        ["python", ["python"]],
-        ["html", ["html"]],
-        ["css", ["css"]],
-        ["typescript", ["typescript", "ts"]],
-        ["react", ["react"]],
-        ["chatbot", ["聊天機器人", "chatbot", "聊天系統", "對話機器人"]],
-        ["no_api", ["不靠 api", "不用 api", "no api", "no-api", "無 api", "不靠 ai api"]],
-        ["ai_api", ["ai api", "openai api", "gemini api", "claude api"]],
-        ["algorithm", ["演算法", "algorithm", "資料結構", "data structure", "bfs", "dfs", "shortest path"]],
-        ["project", ["專案", "project", "作品"]],
-        ["recommend", ["推薦", "建議", "適合", "亮點"]],
-        ["learning", ["學習", "learn", "learning", "練習"]],
-        ["roadmap", ["路線", "學習路線", "roadmap"]],
-        ["skill_gap", ["不會", "不熟", "缺乏", "lack", "skill gap"]],
-        ["professional", ["專業", "不像大學作業", "工程案例", "產品問題"]],
-        ["visualization", ["視覺化", "visualization", "visualisation", "互動圖形"]],
-        ["debug", ["debug", "除錯", "偵錯", "debug panel", "reasoning trace"]],
-        ["explain", ["解釋", "為什麼", "判斷", "顯示原因"]],
-        ["confidence", ["confidence", "信心", "信心分數", "機率"]],
-        ["similarity", ["similarity", "相似度", "score", "分數"]],
-        ["decision", ["final decision", "決策", "選這個", "selected"]],
-        ["state", ["state", "狀態管理", "狀態"]],
-        ["test", ["test", "testing", "測試"]],
-        ["faq", ["faq", "問題", "答案"]],
-        ["enter_submit", ["enter", "送出", "按 enter", "enter 就能輸入", "enter 就能送出"]],
-        ["newline", ["shift enter", "換行", "多行輸入"]],
-        ["smart_answer", ["智能", "智慧", "聰明", "更準", "回答品質", "智能回答"]],
-        ["training", ["訓練", "training", "train", "訓練資料", "labeled examples", "錯判"]],
-        ["pq_box", ["pq", "p q", "p→q", "pq盒子", "pq 盒子", "盒子"]],
-        ["ui_quality", ["質感", "好看", "ui設計", "ui 設計", "介面", "polish"]],
+      const recommendations = [
+        ["derive_topological_chatbot", "Topological Rule-based Chatbot Engine", "用 facts 與 rule nodes 建立圖，依拓樸順序推理，偵測 SCC cycle，最後輸出 closure facts。"],
+        ["derive_debug_panel", "Explainable Reasoning Debug Panel", "顯示 extracted facts、triggered rules、closure facts、SCC cycles、reasoning path 與 rank score。"],
+        ["derive_graph_visualizer", "Concept Graph Visualizer", "用 concept graph distance 從 closure facts 排序推薦，讓推薦不是黑箱。"],
+        ["derive_portfolio_tool", "Engineering Portfolio Tool", "把 pseudo chatbot 包裝成有工程深度的前端作品集工具。"],
+        ["derive_js_learning_path", "JavaScript Learning Path", "把前端技能缺口轉成可視化 roadmap 與下一步學習建議。"],
+        ["derive_static_deploy", "Static GitHub Pages Deployment", "保留可直接試用的靜態頁，同時維護 React/TypeScript 模組化原始碼。"],
+      ].map(([factId, title, answer]) => ({ factId, title, answer }));
+
+      const factLabel = new Map(factNodes.map((fact) => [fact.id, fact.label]));
+      const messages = [
+        {
+          role: "system",
+          content: "No OpenAI / Gemini / LLM. This MVP uses propositional facts, rule nodes, topological sorting, SCC, closure, and concept distance.",
+        },
       ];
 
-      const aliasMap = new Map();
-      synonyms.forEach(([canonical, aliases]) => aliases.forEach((alias) => aliasMap.set(normalize(alias), canonical)));
-      const aliasesByLength = [...aliasMap.keys()].sort((a, b) => b.length - a.length);
-
-      function normalize(text) {
-        return text.normalize("NFKC").toLowerCase()
-          .replace(/[!"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~-]/g, " ")
-          .replace(/[，。！？、；：「」『』（）【】《》]/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
+      function buildRuleGraph() {
+        const nodes = [
+          ...factNodes.map((fact) => ({ id: fact.id, kind: "fact", label: fact.label })),
+          ...rules.map((rule) => ({ id: rule.id, kind: "rule", label: rule.label })),
+        ];
+        const edges = rules.flatMap((rule) => [
+          ...rule.prerequisites.map((factId) => ({ from: factId, to: rule.id, label: "requires" })),
+          ...rule.conclusions.map((factId) => ({ from: rule.id, to: factId, label: "derives" })),
+        ]);
+        const adjacency = new Map(nodes.map((node) => [node.id, []]));
+        edges.forEach((edge) => adjacency.get(edge.from).push(edge.to));
+        return { nodes, edges, adjacency };
       }
 
-      function tokenize(text) {
-        const normalized = normalize(text);
-        if (!normalized) return [];
-        const tokens = [];
-        const ranges = [];
-        aliasesByLength.forEach((alias) => {
-          let start = 0;
-          while (start < normalized.length) {
-            const index = normalized.indexOf(alias, start);
-            if (index === -1) break;
-            const range = [index, index + alias.length];
-            if (!ranges.some(([a, b]) => range[0] < b && range[1] > a)) {
-              ranges.push(range);
-              tokens.push(aliasMap.get(alias) || alias);
+      function topologicalSort(graph) {
+        const indegree = new Map(graph.nodes.map((node) => [node.id, 0]));
+        graph.adjacency.forEach((targets) => targets.forEach((target) => indegree.set(target, (indegree.get(target) || 0) + 1)));
+        const queue = graph.nodes.filter((node) => indegree.get(node.id) === 0).map((node) => node.id);
+        const order = [];
+        while (queue.length) {
+          const current = queue.shift();
+          order.push(current);
+          (graph.adjacency.get(current) || []).forEach((neighbor) => {
+            indegree.set(neighbor, indegree.get(neighbor) - 1);
+            if (indegree.get(neighbor) === 0) queue.push(neighbor);
+          });
+        }
+        const cycleNodeIds = graph.nodes.map((node) => node.id).filter((id) => !order.includes(id));
+        return { order, cycleNodeIds, isDag: cycleNodeIds.length === 0 };
+      }
+
+      function stronglyConnectedComponents(graph) {
+        let index = 0;
+        const stack = [];
+        const indices = new Map();
+        const lowlink = new Map();
+        const onStack = new Set();
+        const components = [];
+
+        function visit(nodeId) {
+          indices.set(nodeId, index);
+          lowlink.set(nodeId, index);
+          index += 1;
+          stack.push(nodeId);
+          onStack.add(nodeId);
+
+          (graph.adjacency.get(nodeId) || []).forEach((neighbor) => {
+            if (!indices.has(neighbor)) {
+              visit(neighbor);
+              lowlink.set(nodeId, Math.min(lowlink.get(nodeId), lowlink.get(neighbor)));
+            } else if (onStack.has(neighbor)) {
+              lowlink.set(nodeId, Math.min(lowlink.get(nodeId), indices.get(neighbor)));
             }
-            start = index + alias.length;
+          });
+
+          if (lowlink.get(nodeId) === indices.get(nodeId)) {
+            const component = [];
+            let current = "";
+            do {
+              current = stack.pop();
+              onStack.delete(current);
+              component.push(current);
+            } while (current !== nodeId);
+            components.push(component);
           }
+        }
+
+        graph.nodes.forEach((node) => {
+          if (!indices.has(node.id)) visit(node.id);
         });
-        normalized.split(" ").forEach((raw) => {
-          const token = raw.trim();
-          if (token && token.length >= 2 && /[a-z0-9_]/i.test(token)) tokens.push(aliasMap.get(token) || token);
-        });
-        return tokens;
+        return {
+          components,
+          cyclicComponents: components.filter((component) => component.length > 1),
+        };
       }
 
       function extractFacts(input) {
-        const lower = input.toLowerCase();
-        return facts.filter(([, patterns]) => patterns.some((pattern) => pattern.test(lower))).map(([fact]) => fact);
+        const normalized = input.trim().toLowerCase();
+        return [...new Set(factNodes.filter((fact) => fact.patterns.some((pattern) => pattern.test(normalized))).map((fact) => fact.id))];
       }
 
-      function matchRules(inputFacts) {
-        const factSet = new Set(inputFacts);
-        return rules.filter((rule) => rule.when.every((fact) => factSet.has(fact))).sort((a, b) => b.confidence - a.confidence);
-      }
-
-      function tf(tokens) {
-        const vector = {};
-        tokens.forEach((token) => vector[token] = (vector[token] || 0) + 1);
-        Object.keys(vector).forEach((token) => vector[token] = vector[token] / tokens.length);
-        return vector;
-      }
-
-      function buildRetrieval() {
-        const docs = faqs.map((doc) => ({ doc, tokens: tokenize(`${doc.question} ${doc.answer} ${doc.tags.join(" ")}`) }));
-        const index = new Map();
-        docs.forEach(({ doc, tokens }) => [...new Set(tokens)].forEach((token) => {
-          if (!index.has(token)) index.set(token, new Set());
-          index.get(token).add(doc.id);
-        }));
-        const df = new Map();
-        docs.forEach(({ tokens }) => [...new Set(tokens)].forEach((token) => df.set(token, (df.get(token) || 0) + 1)));
-        const idf = new Map([...df.entries()].map(([token, count]) => [token, Math.log((docs.length + 1) / (count + 1)) + 1]));
-        const vectors = new Map(docs.map(({ doc, tokens }) => [doc.id, tfidf(tokens, idf, docs.length)]));
-        return { docs, index, idf, vectors };
-      }
-
-      function tfidf(tokens, idf, count) {
-        const termFrequency = tf(tokens);
-        const vector = {};
-        Object.entries(termFrequency).forEach(([token, value]) => vector[token] = value * (idf.get(token) || Math.log(count + 1) + 1));
-        return vector;
-      }
-
-      function cosine(a, b) {
-        const tokens = new Set([...Object.keys(a), ...Object.keys(b)]);
-        let dot = 0, ma = 0, mb = 0;
-        tokens.forEach((token) => {
-          const va = a[token] || 0;
-          const vb = b[token] || 0;
-          dot += va * vb;
-          ma += va * va;
-          mb += vb * vb;
-        });
-        return ma && mb ? dot / (Math.sqrt(ma) * Math.sqrt(mb)) : 0;
-      }
-
-      const retrievalResources = buildRetrieval();
-      const retrievalThreshold = 0.24;
-
-      function retrieve(input) {
-        const queryTokens = tokenize(input);
-        const candidateIds = [...new Set(queryTokens.flatMap((token) => [...(retrievalResources.index.get(token) || [])]))];
-        const searchableIds = candidateIds.length ? candidateIds : faqs.map((doc) => doc.id);
-        const queryVector = tfidf(queryTokens, retrievalResources.idf, retrievalResources.docs.length);
-        const results = retrievalResources.docs
-          .filter(({ doc }) => searchableIds.includes(doc.id))
-          .map(({ doc, tokens }) => ({
-            documentId: doc.id,
-            question: doc.question,
-            answer: doc.answer,
-            similarityScore: cosine(queryVector, retrievalResources.vectors.get(doc.id)),
-            matchedTokens: [...new Set(queryTokens.filter((token) => tokens.includes(token)))],
-          }))
-          .sort((a, b) => b.similarityScore - a.similarityScore)
-          .slice(0, 5);
-        return { queryTokens, candidateIds, results, selected: results.find((result) => result.similarityScore >= retrievalThreshold), searched: searchableIds.length };
-      }
-
-      function trainNaiveBayes() {
-        const vocabulary = new Set();
-        const docCount = new Map();
-        const tokenCount = new Map();
-        const totalTokens = new Map();
-        trainingData.forEach(({ text, intent }) => {
-          const tokens = tokenize(text);
-          docCount.set(intent, (docCount.get(intent) || 0) + 1);
-          if (!tokenCount.has(intent)) tokenCount.set(intent, new Map());
-          tokens.forEach((token) => {
-            vocabulary.add(token);
-            tokenCount.get(intent).set(token, (tokenCount.get(intent).get(token) || 0) + 1);
-            totalTokens.set(intent, (totalTokens.get(intent) || 0) + 1);
+      function shortestConceptDistance(fromFacts, targetFact) {
+        const queue = fromFacts.map((factId) => ({ factId, distance: 0 }));
+        const visited = new Set(fromFacts);
+        while (queue.length) {
+          const current = queue.shift();
+          if (current.factId === targetFact) return current.distance;
+          (conceptNeighbors[current.factId] || []).forEach((neighbor) => {
+            if (!visited.has(neighbor)) {
+              visited.add(neighbor);
+              queue.push({ factId: neighbor, distance: current.distance + 1 });
+            }
           });
-        });
-        return { intents: [...docCount.keys()], vocabulary, docCount, tokenCount, totalTokens, totalDocs: trainingData.length };
+        }
+        return Number.POSITIVE_INFINITY;
       }
 
-      const nbModel = trainNaiveBayes();
-      const intentThreshold = 0.36;
-
-      function classifyIntent(input) {
-        const tokens = tokenize(input);
-        const evidenceTokens = tokens.filter((token) => nbModel.vocabulary.has(token));
-        const scoringTokens = evidenceTokens.length ? evidenceTokens : tokens;
-        const logScores = nbModel.intents.map((intent) => {
-          const prior = (nbModel.docCount.get(intent) || 0) / nbModel.totalDocs;
-          const counts = nbModel.tokenCount.get(intent) || new Map();
-          const total = nbModel.totalTokens.get(intent) || 0;
-          const logScore = scoringTokens.reduce((score, token) => {
-            const likelihood = ((counts.get(token) || 0) + 1) / (total + nbModel.vocabulary.size);
-            return score + Math.log(likelihood);
-          }, Math.log(prior || Number.EPSILON));
-          return { intent, logScore };
-        });
-        const max = Math.max(...logScores.map((item) => item.logScore));
-        const expScores = logScores.map((item) => ({ intent: item.intent, score: Math.exp(item.logScore - max) }));
-        const total = expScores.reduce((sum, item) => sum + item.score, 0);
-        const probabilities = expScores.map((item) => ({ intent: item.intent, probability: item.score / total })).sort((a, b) => b.probability - a.probability);
-        return {
-          predictedIntent: probabilities[0].intent,
-          confidence: probabilities[0].probability,
-          probabilities: probabilities.slice(0, 3),
-          evidenceTokens: [...new Set(evidenceTokens)],
-        };
+      function rankRecommendations(closureFacts, extractedFacts) {
+        return recommendations
+          .map((recommendation) => {
+            const distance = shortestConceptDistance(closureFacts, recommendation.factId);
+            const matchedFacts = closureFacts.filter((factId) => shortestConceptDistance([factId], recommendation.factId) <= 1);
+            const score = Number.isFinite(distance) ? 1 / (1 + distance) + matchedFacts.length * 0.12 + extractedFacts.length * 0.01 : 0;
+            return { ...recommendation, distance, matchedFacts, score };
+          })
+          .sort((a, b) => b.score - a.score);
       }
 
       function runInference(input) {
         const started = performance.now();
+        const graph = buildRuleGraph();
+        const topo = topologicalSort(graph);
+        const scc = stronglyConnectedComponents(graph);
         const extractedFacts = extractFacts(input);
-        const triggeredRules = matchRules(extractedFacts);
-        const retrieval = retrieve(input);
-        const intent = classifyIntent(input);
-        const bestRule = triggeredRules[0];
-        let finalResponse, finalSource, confidence, reason;
-        if (bestRule && bestRule.confidence >= 0.85) {
-          finalResponse = bestRule.then;
-          finalSource = "rule-based";
-          confidence = bestRule.confidence;
-          reason = `Rule ${bestRule.id} matched all required facts and confidence ${bestRule.confidence.toFixed(2)} >= 0.85.`;
-        } else if (retrieval.selected) {
-          finalResponse = retrieval.selected.answer;
-          finalSource = "retrieval-based";
-          confidence = retrieval.selected.similarityScore;
-          reason = `FAQ ${retrieval.selected.documentId} similarity ${retrieval.selected.similarityScore.toFixed(2)} >= ${retrievalThreshold.toFixed(2)}.`;
-        } else if (intent.confidence >= intentThreshold) {
-          finalResponse = intentTemplates[intent.predictedIntent];
-          finalSource = "ML intent-based";
-          confidence = intent.confidence;
-          reason = `Intent ${intent.predictedIntent} confidence ${intent.confidence.toFixed(2)} >= ${intentThreshold.toFixed(2)}.`;
-        } else {
-          finalResponse = "我需要更多資訊才能做出可靠建議。你可以補充目標職位、目前技能、想做的作品類型，或是否希望避開外部 API。";
-          finalSource = "clarification";
-          confidence = 0.2;
-          reason = "No high-confidence rule matched, FAQ similarity stayed below threshold, and intent confidence was not high enough.";
-        }
-        finalResponse = composeSmartResponse(finalResponse, { extractedFacts, triggeredRules, retrieval, intent });
-        const trace = { extractedFacts, triggeredRules, retrieval, intent, finalResponse, finalSource, confidence, reason };
-        trace.metrics = {
-          time: performance.now() - started,
-          rules: rules.length,
-          docs: retrieval.searched,
-          memory: Math.max(1, Math.ceil(JSON.stringify(trace).length / 1024)),
+        const closure = new Set(extractedFacts);
+        const triggeredRules = [];
+
+        topo.order.forEach((nodeId) => {
+          const rule = rules.find((candidate) => candidate.id === nodeId);
+          if (!rule) return;
+          if (!rule.prerequisites.every((factId) => closure.has(factId))) return;
+          const newlyDerivedFacts = rule.conclusions.filter((factId) => !closure.has(factId));
+          newlyDerivedFacts.forEach((factId) => closure.add(factId));
+          triggeredRules.push({ rule, newlyDerivedFacts, step: triggeredRules.length + 1 });
+        });
+
+        const closureFacts = [...closure];
+        const ranking = rankRecommendations(closureFacts, extractedFacts).slice(0, 5);
+        const reasoningPath = triggeredRules.map(
+          (trigger) =>
+            `Step ${trigger.step}: ${trigger.rule.prerequisites.map(label).join(" + ")} -> ${
+              trigger.newlyDerivedFacts.map(label).join(", ") || "already known"
+            }`,
+        );
+        const answer = generateResponse({ ranking, closureFacts, reasoningPath, triggeredRules });
+        const inferenceTimeMs = performance.now() - started;
+
+        return {
+          input,
+          graph,
+          topo,
+          scc,
+          extractedFacts,
+          closureFacts,
+          triggeredRules,
+          ranking,
+          reasoningPath,
+          answer,
+          inferenceTimeMs,
         };
-        return trace;
       }
 
-      function composeSmartResponse(base, context) {
-        const nextStep = suggestNextStep(context);
-        const evidence = context.triggeredRules[0]
-          ? `命中規則：${context.triggeredRules[0].id}`
-          : context.retrieval.results[0]
-            ? `最相似 FAQ：${context.retrieval.results[0].documentId} / ${context.retrieval.results[0].similarityScore.toFixed(3)}`
-            : `預測 intent：${context.intent.predictedIntent} / ${context.intent.confidence.toFixed(3)}`;
-        return `${base}\n\n下一步：${nextStep}\n依據：${evidence}。`;
-      }
-
-      function suggestNextStep(context) {
-        const facts = new Set(context.extractedFacts);
-        if (facts.has("want_training") && facts.has("want_pq_box") && facts.has("want_better_ui")) {
-          return "先把這次需求拆成三個可驗證升級：補 trainingData 讓 intent 更準、補 PQ rule 讓規則命中更明確、補 UI reasoning box 讓推理更有質感。";
+      function generateResponse(trace) {
+        const top = trace.ranking[0];
+        if (!top) {
+          return "我需要更多 facts 才能推理。請補充目標、技能、限制，或是否要 no-API / graph / explainable。";
         }
-        if (facts.has("want_enter_submit")) return "已支援 Enter 送出、Shift+Enter 換行；若接下來要更像產品，可以加 command history 與範例 prompt。";
-        if (facts.has("want_training")) return "把實際錯判句子收集成 text + intent，補進 trainingData，再觀察 top 3 probability 是否更集中。";
-        if (facts.has("want_pq_box")) return "把 P/facts、IF/rules、Q/output 固定顯示在中間區，並用右側 debug trace 驗證每一步。";
-        if (facts.has("want_better_ui")) return "優先整理資訊層級：主回答、PQ reasoning、metrics、debug trace 各自承擔一種任務。";
-        if (context.intent.predictedIntent === "algorithm_project") return "把演算法步驟拆成可視化 state transitions，讓作品展示你真的懂邏輯。";
-        if (context.intent.predictedIntent === "skill_gap") return "把缺口轉成 roadmap，再把 roadmap 的每一步做成可展示的小功能。";
-        return "補一個更具體的目標或限制，系統會同時用 PQ rules、FAQ similarity 與 intent probability 重新判斷。";
+        const path = trace.reasoningPath[0] || "No rule fired; recommendation came from concept neighborhood.";
+        return `${top.title}\n${top.answer}\n\nClosure facts: ${trace.closureFacts.map(label).join(", ")}\nReasoning path: ${path}`;
       }
 
-      const messages = [{ role: "system", content: "No external AI API connected. Everything runs locally in this HTML page." }];
+      function label(id) {
+        return factLabel.get(id) || id;
+      }
 
       function addMessage(role, content, source) {
         messages.push({ role, content, source });
@@ -894,61 +790,71 @@
       }
 
       function renderMessages() {
-        document.getElementById("messages").innerHTML = messages.map((message) => `
-          <article class="message ${message.role}">
-            <div class="message-meta"><span>${message.role}</span><span>${message.source || ""}</span></div>
-            <p>${escapeHtml(message.content)}</p>
-          </article>
-        `).join("");
+        document.getElementById("messages").innerHTML = messages
+          .map(
+            (message) => `
+              <article class="message ${message.role}">
+                <div class="message-meta"><span>${message.role}</span><span>${message.source || ""}</span></div>
+                <p>${escapeHtml(message.content)}</p>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      function renderTrace(trace) {
+        document.getElementById("answer").textContent = trace.answer;
+        document.getElementById("fact-panel").innerHTML = tags(trace.extractedFacts.map(label));
+        document.getElementById("closure-panel").innerHTML = tags(trace.closureFacts.map(label));
+        document.getElementById("rules-panel").innerHTML = trace.triggeredRules.length
+          ? trace.triggeredRules
+              .map(
+                (trigger) =>
+                  `<p><strong>${trigger.step}. ${escapeHtml(trigger.rule.label)}</strong><br>${escapeHtml(trigger.rule.hint)}<br>Derived: ${escapeHtml(
+                    trigger.newlyDerivedFacts.map(label).join(", ") || "already known",
+                  )}</p>`,
+              )
+              .join("<hr>")
+          : "No rule fired.";
+        document.getElementById("ranking-panel").innerHTML = trace.ranking
+          .map(
+            (item, index) =>
+              `<p><strong>#${index + 1} ${escapeHtml(item.title)}</strong><br>score ${item.score.toFixed(3)} / distance ${
+                Number.isFinite(item.distance) ? item.distance : "inf"
+              }<br>${escapeHtml(item.answer)}</p>`,
+          )
+          .join("<hr>");
+        document.getElementById("reasoning-path").innerHTML = `
+          <div class="graph-node">
+            <p class="node-title">Facts</p>
+            <p class="node-body">${escapeHtml(trace.extractedFacts.map(label).join(", ") || "none")}</p>
+          </div>
+          <div class="graph-arrow">→</div>
+          <div class="graph-node">
+            <p class="node-title">Topological Rules</p>
+            <p class="node-body">${escapeHtml(trace.triggeredRules.map((trigger) => trigger.rule.id).join(" -> ") || "no fired rules")}</p>
+          </div>
+          <div class="graph-arrow">→</div>
+          <div class="graph-node">
+            <p class="node-title">Closure / Ranking</p>
+            <p class="node-body">${escapeHtml((trace.ranking[0] && trace.ranking[0].title) || "no recommendation")}</p>
+          </div>
+        `;
+        renderDebug(trace);
+        document.getElementById("time").textContent = `${trace.inferenceTimeMs.toFixed(2)} ms`;
+        document.getElementById("nodes").textContent = String(trace.graph.nodes.length);
+        document.getElementById("rule-count").textContent = String(rules.length);
+        document.getElementById("closure-count").textContent = String(trace.closureFacts.length);
+        document.getElementById("cycle-status").textContent = trace.topo.isDag ? "DAG" : "cycle";
       }
 
       function renderDebug(trace) {
-        const debug = document.getElementById("debug");
-        if (!trace) {
-          debug.innerHTML = section("Extracted facts", empty()) + section("Final decision", `<div class="empty">waiting-for-input</div>`);
-          return;
-        }
-        debug.innerHTML =
-          section("Extracted facts", tags(trace.extractedFacts)) +
-          section("Triggered rules", trace.triggeredRules.length ? trace.triggeredRules.map((rule) => `<div class="debug-card"><p>${rule.id}</p><p>${rule.description}</p><p>confidence: ${rule.confidence.toFixed(2)}</p></div>`).join("") : empty()) +
-          section("Query tokens", tags(trace.retrieval.queryTokens)) +
-          section("Matched documents", tags(trace.retrieval.candidateIds)) +
-          section("Retrieval top-k", rows([["threshold", retrievalThreshold.toFixed(2)], ["selected", trace.retrieval.selected?.documentId || "below-threshold"]]) + trace.retrieval.results.map((result, index) => `<div class="debug-card"><p>#${index + 1} ${result.documentId} <strong>${result.similarityScore.toFixed(3)}</strong></p><p>${result.question}</p><p>matched: ${result.matchedTokens.join(", ") || "none"}</p></div>`).join("")) +
-          section("ML intent", rows([["predicted", trace.intent.predictedIntent], ["confidence", trace.intent.confidence.toFixed(3)], ["threshold", intentThreshold.toFixed(2)]]) + `<div class="debug-card"><p>top 3 probabilities</p>${rows(trace.intent.probabilities.map((item) => [item.intent, item.probability.toFixed(3)]))}</div><p class="eyebrow">evidence tokens</p>${tags(trace.intent.evidenceTokens)}`) +
-          section("Final decision", rows([["source", trace.finalSource]]) + `<div class="debug-card">${trace.reason}</div>`);
-      }
-
-      function renderSummary(trace) {
-        document.getElementById("final-response").textContent = trace.finalResponse;
-        document.getElementById("source").textContent = trace.finalSource;
-        document.getElementById("confidence").textContent = `${Math.round(trace.confidence * 100)}%`;
-        document.getElementById("intent").textContent = trace.intent.predictedIntent;
-        document.getElementById("top-score").textContent = (trace.retrieval.results[0]?.similarityScore || 0).toFixed(3);
-        document.getElementById("time").textContent = `${trace.metrics.time.toFixed(2)} ms`;
-        document.getElementById("rules").textContent = trace.metrics.rules;
-        document.getElementById("docs").textContent = trace.metrics.docs;
-        document.getElementById("memory").textContent = `${trace.metrics.memory} KB`;
-        renderPQBox(trace);
-      }
-
-      function renderPQBox(trace) {
-        const bestRule = trace.triggeredRules[0];
-        document.getElementById("pq-box").innerHTML = `
-          <div class="pq-node">
-            <p class="pq-node-title">P / Input Facts</p>
-            <p class="pq-node-body">${escapeHtml(trace.extractedFacts.join(", ") || "no symbolic facts")}</p>
-          </div>
-          <div class="pq-arrow">→</div>
-          <div class="pq-node">
-            <p class="pq-node-title">IF / Matched Rule</p>
-            <p class="pq-node-body">${escapeHtml(bestRule ? `${bestRule.id}: ${bestRule.description}` : "No high-confidence PQ rule; fallback to retrieval or intent.")}</p>
-          </div>
-          <div class="pq-arrow">→</div>
-          <div class="pq-node">
-            <p class="pq-node-title">Q / Selected Output</p>
-            <p class="pq-node-body">${escapeHtml(trace.finalSource)} · ${Math.round(trace.confidence * 100)}%</p>
-          </div>
-        `;
+        document.getElementById("debug").innerHTML =
+          section("Topological order", `<div class="trace-card">${escapeHtml(trace.topo.order.join(" -> "))}</div>`) +
+          section("SCC cycle detection", trace.scc.cyclicComponents.length ? trace.scc.cyclicComponents.map((component) => `<div class="trace-card">${escapeHtml(component.join(" -> "))}</div>`).join("") : `<div class="trace-card">No strongly connected rule cycle detected.</div>`) +
+          section("Rule graph edges", `<div class="trace-card">${escapeHtml(trace.graph.edges.map((edge) => `${edge.from} -${edge.label}-> ${edge.to}`).join("\n"))}</div>`) +
+          section("Triggered rules", trace.triggeredRules.length ? trace.triggeredRules.map((trigger) => `<div class="trace-card">${escapeHtml(`${trigger.step}. ${trigger.rule.id}: ${trigger.rule.prerequisites.join(" + ")} -> ${trigger.newlyDerivedFacts.join(", ") || "already known"}`)}</div>`).join("") : empty()) +
+          section("Concept distance ranking", trace.ranking.map((item) => rows([["title", item.title], ["distance", Number.isFinite(item.distance) ? item.distance : "inf"], ["score", item.score.toFixed(3)], ["matched", item.matchedFacts.map(label).join(", ") || "none"]])).join("<br>"));
       }
 
       function section(title, content) {
@@ -956,11 +862,11 @@
       }
 
       function rows(items) {
-        return items.map(([label, value]) => `<div class="trace-row"><span>${label}</span><span>${escapeHtml(String(value))}</span></div>`).join("");
+        return items.map(([key, value]) => `<div class="trace-row"><span>${escapeHtml(String(key))}</span><span>${escapeHtml(String(value))}</span></div>`).join("");
       }
 
       function tags(items) {
-        return items.length ? `<div class="tag-list">${items.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("")}</div>` : empty();
+        return items.length ? `<div class="tag-list">${items.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("")}</div>` : "none";
       }
 
       function empty() {
@@ -968,7 +874,7 @@
       }
 
       function escapeHtml(text) {
-        return text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[char]));
+        return String(text).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[char]));
       }
 
       document.getElementById("composer").addEventListener("submit", (event) => {
@@ -978,9 +884,8 @@
         if (!value) return;
         addMessage("user", value);
         const trace = runInference(value);
-        addMessage("assistant", trace.finalResponse, trace.finalSource);
-        renderSummary(trace);
-        renderDebug(trace);
+        addMessage("assistant", trace.answer, "topological-closure");
+        renderTrace(trace);
         input.value = "";
       });
 
@@ -1001,36 +906,20 @@
       document.getElementById("reset").addEventListener("click", () => {
         messages.splice(1);
         renderMessages();
-        renderDebug();
-        document.getElementById("final-response").textContent = "輸入問題後，這裡會顯示本地推理、FAQ 檢索與 intent classifier 的混合決策結果。";
-        document.getElementById("source").textContent = "waiting";
-        document.getElementById("confidence").textContent = "0%";
-        document.getElementById("intent").textContent = "none";
-        document.getElementById("top-score").textContent = "0.000";
+        document.getElementById("answer").textContent = "輸入一句話後，系統會抽取 facts、依拓樸順序套用 rule graph、推出 closure facts，並用 concept distance 排序推薦。";
+        document.getElementById("fact-panel").textContent = "No facts yet.";
+        document.getElementById("closure-panel").textContent = "No closure yet.";
+        document.getElementById("rules-panel").textContent = "No triggered rules yet.";
+        document.getElementById("ranking-panel").textContent = "No ranking yet.";
+        document.getElementById("debug").innerHTML = "";
         document.getElementById("time").textContent = "0.00 ms";
-        document.getElementById("rules").textContent = "0";
-        document.getElementById("docs").textContent = "0";
-        document.getElementById("memory").textContent = "0 KB";
-        document.getElementById("pq-box").innerHTML = `
-          <div class="pq-node">
-            <p class="pq-node-title">P / Input Facts</p>
-            <p class="pq-node-body">waiting</p>
-          </div>
-          <div class="pq-arrow">→</div>
-          <div class="pq-node">
-            <p class="pq-node-title">IF / Matched Rule</p>
-            <p class="pq-node-body">waiting</p>
-          </div>
-          <div class="pq-arrow">→</div>
-          <div class="pq-node">
-            <p class="pq-node-title">Q / Selected Output</p>
-            <p class="pq-node-body">waiting</p>
-          </div>
-        `;
+        document.getElementById("nodes").textContent = "0";
+        document.getElementById("rule-count").textContent = "0";
+        document.getElementById("closure-count").textContent = "0";
+        document.getElementById("cycle-status").textContent = "unknown";
       });
 
       renderMessages();
-      renderDebug();
     </script>
   </body>
 </html>
