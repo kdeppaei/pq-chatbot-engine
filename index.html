@@ -216,6 +216,52 @@
         margin-top: 12px;
       }
 
+      .brain-settings {
+        display: grid;
+        gap: 9px;
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        background: #fbfdff;
+        padding: 12px;
+      }
+
+      .brain-row {
+        display: grid;
+        grid-template-columns: 92px minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+      }
+
+      .brain-row label,
+      .brain-note {
+        color: var(--muted);
+        font-family: Consolas, ui-monospace, monospace;
+        font-size: 11px;
+      }
+
+      .brain-row input,
+      .brain-row select {
+        min-width: 0;
+        border: 1px solid var(--line);
+        background: var(--white);
+        color: var(--ink);
+        padding: 8px;
+        outline: none;
+      }
+
+      .brain-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .brain-toggle input {
+        width: 16px;
+        height: 16px;
+      }
+
       button {
         border: 1px solid var(--ink);
         background: var(--ink);
@@ -383,7 +429,7 @@
 
       .footer {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 1px;
         border-top: 1px solid var(--line);
         background: var(--line);
@@ -435,6 +481,25 @@
               <p class="key-hint">Enter send / Shift+Enter newline</p>
             </div>
             <textarea id="input" placeholder="例如：我要做不靠 API 的可解釋拓樸規則 chatbot，用 React 部署成作品集"></textarea>
+            <div class="brain-settings">
+              <label class="brain-toggle">
+                <input type="checkbox" id="brain-enabled" />
+                使用免費開源模型主腦增強回答
+              </label>
+              <div class="brain-row">
+                <label for="brain-key">API Key</label>
+                <input id="brain-key" type="password" placeholder="OpenRouter key，只存在本機瀏覽器" autocomplete="off" />
+              </div>
+              <div class="brain-row">
+                <label for="brain-model">Model</label>
+                <select id="brain-model">
+                  <option value="nvidia/nemotron-3-ultra-550b-a55b:free">NVIDIA Nemotron 3 Ultra free</option>
+                  <option value="poolside/laguna-xs-2.1:free">Poolside Laguna XS 2.1 free</option>
+                  <option value="cohere/north-mini-code:free">Cohere North Mini Code free</option>
+                </select>
+              </div>
+              <p class="brain-note">Free 額度與模型可用性由 OpenRouter 當下政策決定；前端不內建任何 key。</p>
+            </div>
             <div class="actions">
               <button type="submit">Run Topological Inference</button>
               <button type="button" class="secondary" id="reset">Reset</button>
@@ -509,6 +574,7 @@
         <div class="metric"><p class="eyebrow">Rules Checked</p><p class="value" id="rule-count">0</p></div>
         <div class="metric"><p class="eyebrow">Closure Facts</p><p class="value" id="closure-count">0</p></div>
         <div class="metric"><p class="eyebrow">Cycle Status</p><p class="value" id="cycle-status">unknown</p></div>
+        <div class="metric"><p class="eyebrow">Brain Status</p><p class="value" id="brain-status">local</p></div>
       </footer>
     </main>
 
@@ -615,9 +681,15 @@
       const messages = [
         {
           role: "system",
-          content: "No OpenAI / Gemini / LLM. This MVP uses propositional facts, rule nodes, topological sorting, SCC, closure, and concept distance.",
+          content: "Local topological inference is always available. Optional brain mode can call a free OpenRouter open-model endpoint with your own browser-local API key.",
         },
       ];
+
+      const brainStorageKeys = {
+        enabled: "topologicalBrainEnabled",
+        key: "topologicalBrainOpenRouterKey",
+        model: "topologicalBrainModel",
+      };
 
       function buildRuleGraph() {
         const nodes = [
@@ -767,8 +839,90 @@
           ranking,
           reasoningPath,
           answer,
+          localAnswer: answer,
+          brain: {
+            enabled: getBrainConfig().enabled,
+            model: getBrainConfig().model,
+            status: getBrainConfig().enabled ? "configured" : "local-only",
+            error: "",
+          },
           inferenceTimeMs,
         };
+      }
+
+      async function callOpenRouterBrain(input, trace) {
+        const config = getBrainConfig();
+        if (!config.enabled) {
+          return { used: false, status: "local-only", answer: trace.localAnswer, error: "" };
+        }
+        if (!config.apiKey) {
+          return { used: false, status: "missing-key", answer: trace.localAnswer, error: "OpenRouter API key is missing." };
+        }
+
+        const traceContext = {
+          extractedFacts: trace.extractedFacts.map(label),
+          closureFacts: trace.closureFacts.map(label),
+          triggeredRules: trace.triggeredRules.map((trigger) => ({
+            id: trigger.rule.id,
+            prerequisites: trigger.rule.prerequisites.map(label),
+            conclusions: trigger.rule.conclusions.map(label),
+            derived: trigger.newlyDerivedFacts.map(label),
+          })),
+          topRecommendation: trace.ranking[0],
+          ranking: trace.ranking.slice(0, 3).map((item) => ({
+            title: item.title,
+            score: Number(item.score.toFixed(3)),
+            distance: Number.isFinite(item.distance) ? item.distance : "inf",
+          })),
+          localAnswer: trace.localAnswer,
+        };
+
+        try {
+          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${config.apiKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": location.origin,
+              "X-Title": "Topological Rule-based Chatbot Engine",
+            },
+            body: JSON.stringify({
+              model: config.model,
+              max_tokens: 900,
+              temperature: 0.35,
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "你是這個 Topological Rule-based Chatbot Engine 的免費開源模型主腦。請用繁體中文回答。你必須根據提供的拓樸推理 trace 來回答，不要假裝 trace 沒有的 facts。請補強原本 rule-based 回答，讓它更像真正能協助使用者規劃專案的主腦。回答結構：1. 直接建議 2. 為什麼 3. 下一步 4. 本次依據。不要提 OpenAI 或 Gemini。",
+                },
+                {
+                  role: "user",
+                  content: `使用者輸入：${input}\n\n拓樸推理 trace JSON：\n${JSON.stringify(traceContext, null, 2)}`,
+                },
+              ],
+            }),
+          });
+
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`${response.status} ${response.statusText}: ${text.slice(0, 220)}`);
+          }
+
+          const data = await response.json();
+          const answer = data?.choices?.[0]?.message?.content?.trim();
+          if (!answer) {
+            throw new Error("Model returned an empty message.");
+          }
+          return { used: true, status: "llm-brain", answer, error: "" };
+        } catch (error) {
+          return {
+            used: false,
+            status: "fallback-local",
+            answer: `${trace.localAnswer}\n\n主腦 API 暫時不可用，已退回拓樸推理回答。\n原因：${error instanceof Error ? error.message : String(error)}`,
+            error: error instanceof Error ? error.message : String(error),
+          };
+        }
       }
 
       function generateResponse(trace) {
@@ -846,6 +1000,7 @@
         document.getElementById("rule-count").textContent = String(rules.length);
         document.getElementById("closure-count").textContent = String(trace.closureFacts.length);
         document.getElementById("cycle-status").textContent = trace.topo.isDag ? "DAG" : "cycle";
+        document.getElementById("brain-status").textContent = trace.brain.status;
       }
 
       function renderDebug(trace) {
@@ -853,8 +1008,30 @@
           section("Topological order", `<div class="trace-card">${escapeHtml(trace.topo.order.join(" -> "))}</div>`) +
           section("SCC cycle detection", trace.scc.cyclicComponents.length ? trace.scc.cyclicComponents.map((component) => `<div class="trace-card">${escapeHtml(component.join(" -> "))}</div>`).join("") : `<div class="trace-card">No strongly connected rule cycle detected.</div>`) +
           section("Rule graph edges", `<div class="trace-card">${escapeHtml(trace.graph.edges.map((edge) => `${edge.from} -${edge.label}-> ${edge.to}`).join("\n"))}</div>`) +
+          section("Brain API", rows([["status", trace.brain.status], ["model", trace.brain.model], ["error", trace.brain.error || "none"]])) +
           section("Triggered rules", trace.triggeredRules.length ? trace.triggeredRules.map((trigger) => `<div class="trace-card">${escapeHtml(`${trigger.step}. ${trigger.rule.id}: ${trigger.rule.prerequisites.join(" + ")} -> ${trigger.newlyDerivedFacts.join(", ") || "already known"}`)}</div>`).join("") : empty()) +
           section("Concept distance ranking", trace.ranking.map((item) => rows([["title", item.title], ["distance", Number.isFinite(item.distance) ? item.distance : "inf"], ["score", item.score.toFixed(3)], ["matched", item.matchedFacts.map(label).join(", ") || "none"]])).join("<br>"));
+      }
+
+      function getBrainConfig() {
+        return {
+          enabled: localStorage.getItem(brainStorageKeys.enabled) === "true",
+          apiKey: localStorage.getItem(brainStorageKeys.key) || "",
+          model: localStorage.getItem(brainStorageKeys.model) || "nvidia/nemotron-3-ultra-550b-a55b:free",
+        };
+      }
+
+      function saveBrainConfig() {
+        localStorage.setItem(brainStorageKeys.enabled, String(document.getElementById("brain-enabled").checked));
+        localStorage.setItem(brainStorageKeys.key, document.getElementById("brain-key").value.trim());
+        localStorage.setItem(brainStorageKeys.model, document.getElementById("brain-model").value);
+      }
+
+      function hydrateBrainConfig() {
+        const config = getBrainConfig();
+        document.getElementById("brain-enabled").checked = config.enabled;
+        document.getElementById("brain-key").value = config.apiKey;
+        document.getElementById("brain-model").value = config.model;
       }
 
       function section(title, content) {
@@ -877,16 +1054,28 @@
         return String(text).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[char]));
       }
 
-      document.getElementById("composer").addEventListener("submit", (event) => {
+      document.getElementById("composer").addEventListener("submit", async (event) => {
         event.preventDefault();
+        saveBrainConfig();
         const input = document.getElementById("input");
         const value = input.value.trim();
         if (!value) return;
         addMessage("user", value);
         const trace = runInference(value);
-        addMessage("assistant", trace.answer, "topological-closure");
+        renderTrace(trace);
+        document.getElementById("brain-status").textContent = trace.brain.enabled ? "thinking" : "local";
+        const brainResult = await callOpenRouterBrain(value, trace);
+        trace.answer = brainResult.answer;
+        trace.brain.status = brainResult.status;
+        trace.brain.error = brainResult.error;
+        addMessage("assistant", trace.answer, brainResult.used ? "open-model-brain" : "topological-closure");
         renderTrace(trace);
         input.value = "";
+      });
+
+      ["brain-enabled", "brain-key", "brain-model"].forEach((id) => {
+        document.getElementById(id).addEventListener("change", saveBrainConfig);
+        document.getElementById(id).addEventListener("input", saveBrainConfig);
       });
 
       const chatInput = document.getElementById("input");
@@ -917,8 +1106,10 @@
         document.getElementById("rule-count").textContent = "0";
         document.getElementById("closure-count").textContent = "0";
         document.getElementById("cycle-status").textContent = "unknown";
+        document.getElementById("brain-status").textContent = "local";
       });
 
+      hydrateBrainConfig();
       renderMessages();
     </script>
   </body>
